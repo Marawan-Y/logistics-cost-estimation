@@ -1,0 +1,99 @@
+
+# Proposal for Logistics Cost Automation Application
+
+## 1. Introduction
+This proposal outlines the development of an intelligent, reliable, and scalable web application designed to automate the logistics cost calculation process. The application will streamline the process of gathering inputs, entering data, performing calculations, and generating outputs, thereby saving time and reducing manual effort.
+
+## 2. Problem Statement
+Logistics planners currently face the challenge of manually gathering data from various sources, entering inputs into spreadsheets, performing complex calculations, and generating reports. This manual process is time-consuming, error-prone, and lacks standardization.
+
+## 3. Objectives
+- Automate the logistics cost calculation process.
+- Reduce manual effort and minimize errors.
+- Standardize data input and output formats.
+- Provide real-time validation and preview of calculations.
+- Integrate with external data sources for accurate and up-to-date information.
+
+## 4. Methodology
+The application will follow a modular approach, with the following key components:
+1. **Email Reading**: Extract supplier information from emails using NLP.
+2. **User Input Interface**: Provide guided input forms with dynamic fields and smart selectors.
+3. **Web & API Data Extraction**: Fetch data from Google Maps, TARIC, and CO₂ databases.
+4. **Document Parsing**: Extract data from Excel, PDF, and Word documents.
+5. **Input Consolidation**: Merge all inputs into a unified data model.
+6. **Calculation Engine**: Apply dynamic equations to perform cost calculations.
+7. **Output Generation**: Render results in Excel-style tables, PDF reports, and JSON/CSV exports.
+
+## 5. System Architecture
+### Frontend (User Interface)
+- **Tech Stack**: React.js + TypeScript
+- **Features**:
+  - Guided input forms with dynamic fields
+  - Smart selectors (dropdowns, toggles, conditional fields)
+  - File upload interface (Excel, PDF, Word)
+  - Real-time validation and preview of calculations
+
+### Backend (Core Logic & AI Services)
+- **Tech Stack**: Python (FastAPI), Node.js (for async tasks)
+- **Services**:
+  - Email parsing service (IMAP/Graph API)
+  - Document parser (PDF, Excel, Word via Tika or Textract)
+  - Web scraping & API integration (Google Maps, TARIC, etc.)
+  - Calculation engine (custom rule engine or NumPy/Pandas)
+  - AI NLP models (for entity extraction, classification)
+
+### Database
+- **PostgreSQL** for structured data
+- **MongoDB** for semi-structured document metadata
+- **Redis** for caching frequent lookups (e.g., HS codes)
+
+### AI/NLP Layer
+- **LLM-based pipeline** for:
+  - Email intent detection
+  - Supplier info extraction
+  - Document context understanding
+  - Auto-mapping of document fields to app schema
+
+## 6. Key Features
+- **Auto-fill suggestions** based on past entries
+- **Scenario simulation** (e.g., change transport mode)
+- **Version control** for calculations
+- **Audit trail** for compliance
+
+## 7. Data Sources
+- **Supplier-provided data** (via tenders or SharePoint)
+- **Internal logistics directives** (e.g., Y031010)
+- **Standard packaging sheets** (e.g., “Standard Boxes”)
+- **TARIC database** for customs and duty rates
+- **CO₂ cost assumptions** based on EU regulations
+- **Internal rate sheets** for transport and warehousing
+
+## 8. Development Roadmap
+### Phase 1: Planning and Design
+- Define project scope and requirements
+- Design system architecture and data models
+- Create wireframes and UI mockups
+
+### Phase 2: Development
+- Implement frontend components (React.js + TypeScript)
+- Develop backend services (FastAPI, Node.js)
+- Integrate AI/NLP models for data extraction
+- Set up databases (PostgreSQL, MongoDB, Redis)
+
+### Phase 3: Testing and Validation
+- Perform unit and integration testing
+- Validate data extraction and calculation accuracy
+- Conduct user acceptance testing (UAT)
+
+### Phase 4: Deployment and Maintenance
+- Deploy the application to a cloud platform (e.g., AWS, Azure)
+- Monitor performance and address any issues
+- Provide ongoing maintenance and updates
+
+## 9. Conclusion
+The proposed logistics cost automation application will revolutionize the way logistics planners perform cost calculations. By automating data gathering, input, and calculations, the application will save time, reduce errors, and provide standardized outputs. We look forward to collaborating with you to bring this vision to life.
+
+---
+
+**Prepared by:** [Your Name]  
+**Date:** 2025-05-28

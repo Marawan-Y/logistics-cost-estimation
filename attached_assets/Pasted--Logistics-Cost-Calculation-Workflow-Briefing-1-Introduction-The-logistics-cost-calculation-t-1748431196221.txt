@@ -1,0 +1,129 @@
+
+# Logistics Cost Calculation Workflow Briefing
+
+## 1. Introduction
+The logistics cost calculation template is designed to evaluate and optimize supply chain expenses for various materials and suppliers. It supports decision-making in procurement, logistics planning, and cost optimization.
+
+## 2. Objectives
+- Calculate total logistics cost per piece and per year.
+- Evaluate and compare logistics scenarios for different suppliers and materials.
+- Support sourcing decisions with transparent cost breakdowns.
+- Ensure compliance with logistics directives and Incoterms.
+
+## 3. Key Parameters
+### Material Information
+- **Material No.**: Unique identifier for the material.
+- **Material Description**: Name or description of the material.
+- **Weight per pcs (kg)**: Weight of each piece.
+- **Annual volume (average)**: Average annual demand.
+- **Lifetime volume**: Total volume over the material's lifetime.
+- **SOP**: Start of production year.
+
+### Supplier Information
+- **Vendor ID**: Supplier code.
+- **Vendor Name**: Name of the supplier.
+- **Vendor Country**: Country code of the supplier.
+- **City of manufacture**: City where the material is manufactured.
+- **Vendor ZIP**: ZIP code of the city of manufacture.
+- **Incoterm**: International commercial terms for shipping.
+
+### Packaging Information
+- **Packaging type**: Type of packaging used (e.g., KLT, cardboard).
+- **Filling degree per box**: Number of pieces per box.
+- **Packaging cost per part**: Cost of packaging per part.
+- **Tooling cost**: Cost of tools required for packaging.
+
+### Transport Information
+- **Transport mode**: Mode of transport (e.g., sea, road).
+- **Distance**: Distance between supplier and plant.
+- **Transport cost per LU**: Cost per load unit.
+- **CO₂ cost per ton**: Cost of CO₂ emissions per ton.
+
+### Warehouse Information
+- **Storage locations**: Number of storage locations.
+- **Safety stock**: Number of pallets for safety stock.
+- **Warehouse cost per piece**: Cost of warehousing per piece.
+
+### Additional Costs
+- **Customs costs**: Costs related to customs duties and tariffs.
+- **Repacking costs**: Costs for repacking materials.
+- **Inventory interest rate**: Interest rate for inventory.
+
+## 4. Input Types and Sources
+### Defined Selectors
+- Dropdown menus for selecting predefined options (e.g., Incoterm, transport mode).
+
+### Manual Entry
+- Fields for entering specific values (e.g., weight, volume, cost).
+
+### Document Upload
+- Upload interface for Excel, PDF, and Word files to extract data.
+
+### Web and API Data Extraction
+- Google Maps API for calculating distances.
+- TARIC API for fetching duty/tariff rates.
+- CO₂ databases for emission factors.
+
+## 5. Calculation Logic
+### Packaging Loop Calculation
+- Determine the number of packaging units required based on loop time.
+
+### Cost Calculations
+- **Packaging cost per piece** = (Plant + CoC + Maintenance + Scrap) / total volume
+- **Transport cost per piece** = LU cost / LU quantity
+- **CO₂ cost per piece** = (emission factor × weight per LU) / total volume
+- **Warehouse cost per piece** = (storage cost × days × 12) / annual volume
+- **Inventory interest** = inventory value × interest rate
+- **Customs cost** = (duty + tariff) × (price + transport cost)
+- **Total logistics cost per piece** = sum of all above components
+
+## 6. Data Flow
+### Input Gathering
+- Collect data from emails, documents, and web sources.
+- Validate and consolidate inputs into a unified data model.
+
+### Data Structuring
+- Use intelligent forms and selectors to structure data.
+- Auto-suggestions based on past entries.
+
+### Calculation Engine
+- Apply dynamic equations based on input conditions.
+- Handle special packaging, Incoterm logic, etc.
+
+### Output Generation
+- Render results in Excel-style tables, PDF reports, and JSON/CSV exports.
+- Structure output to match the template format.
+
+## 7. Conclusion
+The logistics cost calculation template provides a robust framework for evaluating supply chain costs. It enables informed sourcing decisions, supports sustainability goals, and ensures cost transparency.
+
+---
+
+## Appendix: Sample Data from Excel Sheets
+
+### Overview Sheet
+{overview_df.head().to_string(index=False)}
+
+### Calculation Sheet
+{calculation_df.head().to_string(index=False)}
+
+### Standard Boxes Sheet
+{standard_boxes_df.head().to_string(index=False)}
+
+### Transport Costs Sheet
+{transport_costs_df.head().to_string(index=False)}
+
+### Re-packaging Costs Sheet
+{repackaging_costs_df.head().to_string(index=False)}
+
+### Additional Costs Sheet
+{additional_costs_df.head().to_string(index=False)}
+
+### Revision History Sheet
+{revision_history_df.head().to_string(index=False)}
+
+### Part No. Overview Sheet
+{part_no_overview_df.head().to_string(index=False)}
+
+### Manual Supplier Sheet
+{manual_supplier_df.head().to_string(index=False)}
