@@ -37,20 +37,9 @@ This application streamlines the logistics cost calculation process by providing
 ## 📋 Prerequisites
 
 - Python 3.8 or higher
-- Replit account (for deployment)
 - Web browser (Chrome, Firefox, Safari, or Edge)
 
 ## 🚀 Installation & Setup
-
-### Setting Up on Replit
-
-1. **Fork this Repl** or **Create a new Repl**:
-   - Go to [Replit](https://replit.com)
-   - Click "Create Repl" or fork this existing project
-   - Select "Python" as the language
-
-2. **Install Dependencies**:
-   The application uses `uv` for dependency management. Dependencies are automatically installed when you run the application for the first time.
 
 ### Manual Setup (Local Development)
 
@@ -85,7 +74,6 @@ streamlit run app.py --server.port 5000
 
 The application will be accessible at:
 - Local: `http://0.0.0.0:5000`
-- Network: `http://your-repl-url.repl.co` (on Replit)
 
 ## 📖 User Guide
 

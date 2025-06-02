@@ -15,7 +15,7 @@ def main():
         initial_sidebar_state="expanded"
     )
     
-    st.title("Logistics Cost Automation Application")
+    st.title("Logistics Cost Estimation")
     st.markdown("---")
     
     # Sidebar navigation info
