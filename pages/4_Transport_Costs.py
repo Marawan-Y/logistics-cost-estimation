@@ -5,7 +5,7 @@ from utils.data_manager import DataManager
 st.set_page_config(page_title="Transport Costs", page_icon="🚛")
 
 def main():
-    st.title("🚛 Transport Costs")
+    st.title("Transport Costs")
     st.markdown("Configure transport modes, distances, and cost calculations")
     st.markdown("---")
     

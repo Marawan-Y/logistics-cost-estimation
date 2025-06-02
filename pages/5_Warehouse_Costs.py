@@ -5,7 +5,7 @@ from utils.data_manager import DataManager
 st.set_page_config(page_title="Warehouse Costs", page_icon="🏪")
 
 def main():
-    st.title("🏪 Warehouse Costs")
+    st.title("Warehouse Costs")
     st.markdown("Configure warehouse storage, inventory, and handling costs")
     st.markdown("---")
     

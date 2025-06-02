@@ -5,7 +5,7 @@ from utils.data_manager import DataManager
 st.set_page_config(page_title="Material Information", page_icon="📦")
 
 def main():
-    st.title("📦 Material Information")
+    st.title("Material Information")
     st.markdown("Configure material details for logistics cost calculation")
     st.markdown("---")
     

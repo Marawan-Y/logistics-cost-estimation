@@ -5,7 +5,7 @@ from utils.data_manager import DataManager
 st.set_page_config(page_title="Packaging Costs", page_icon="📦")
 
 def main():
-    st.title("📦 Packaging Costs")
+    st.title("Packaging Costs")
     st.markdown("Configure packaging parameters and cost calculations")
     st.markdown("---")
     

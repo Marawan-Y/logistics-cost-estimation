@@ -5,7 +5,7 @@ from utils.data_manager import DataManager
 st.set_page_config(page_title="Supplier Information", page_icon="🏭")
 
 def main():
-    st.title("🏭 Supplier Information")
+    st.title("Supplier Information")
     st.markdown("Configure supplier details and location information")
     st.markdown("---")
     

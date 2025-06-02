@@ -15,7 +15,7 @@ def main():
         initial_sidebar_state="expanded"
     )
     
-    st.title("🚚 Logistics Cost Automation Application")
+    st.title("Logistics Cost Automation Application")
     st.markdown("---")
     
     # Sidebar navigation info
@@ -56,7 +56,7 @@ def main():
     st.markdown("---")
     
     # Overview of current data
-    st.header("📊 Current Configuration Overview")
+    st.header("Current Configuration Overview")
     
     # Material overview
     materials = st.session_state.data_manager.get_materials()
@@ -78,7 +78,7 @@ def main():
     
     # Quick actions
     st.markdown("---")
-    st.header("🚀 Quick Actions")
+    st.header("Quick Actions")
     
     col1, col2, col3 = st.columns(3)
     

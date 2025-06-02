@@ -7,7 +7,7 @@ import json
 st.set_page_config(page_title="Cost Calculation", page_icon="💰")
 
 def main():
-    st.title("💰 Cost Calculation & Results")
+    st.title("Cost Calculation & Results")
     st.markdown("Calculate total logistics costs and export results")
     st.markdown("---")
     
