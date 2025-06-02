@@ -1,0 +1,171 @@
+logistic-cost-estimation Application:
+--------------------------------------
+FIRST STEP
+Pages:
+
+1- Material Information
+
+2- Supplier Information
+
+3- KB/Bendix location info
+
+4- Operations information
+
+5- Pcs Price -- *****not sure wheather it is needed or not*****
+
+6- Packaging cost
+6.1- Standard Packaging
+6.2- Special Packaging
+6.3- Total Packaging loop
+
+7- Repacking cost
+
+8- Customs cost
+
+9- Transport cost
+
+10- Annual CO2 cost
+
+11- Warehouse cost
+
+12- Inventory cost
+
+13- Inventory Interest
+
+14- Additional cost
+
+15 -- Cost Calculation (Logistics cost supplier) 
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+SECOND STEP
+User Entry parameters
+------------------------------------
+(1) Material Information
+
+1.1 Project Name
+1.2 Material Number
+1.3 Material Description
+1.4 Weight per pcs (kg) 
+1.5 Usage
+1.6 Daily demand (average)
+1.7 Annual volume (average)
+1.9 Lifetime (years)
+1.10 Peak year
+1.11 Peak year volume
+1.12 Working Days per year
+1.13 SOP
+
+
+(2) Supplier Information
+
+2.1 Vendor ID
+2.2 Vendor Name
+2.3 Vendor Country
+2.4 City of manufacture
+2.5 Vendor ZIP
+2.6 Delivery Performance 
+2.7 Deliveries per month
+
+
+(3) KB/Bendix location info
+
+3.1 KB/Bendix Plant
+3.2 KB/Bendix - Country
+3.3 Distance
+
+
+(4) Operations Information
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        4.1 Incoterm Code - (Selection form)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    4.2 Incoterm Named Place                      
+4.3 Part Classification - (Selection form)
+4.4 Call-off transfer type - (Selection form)
+4.5 Latest version (Y031010) of Logistics Directive - (Selection form)
+4.6 Lead time (d)
+4.7 Sub-supplier used - (Selection form)
+4.8 Sub supplier need for boxes (d)
+4.9 Packaging tool ownership - (selection form)
+4.10 Responsible - (selection form)
+4.11 Currency - (selection form)
+
+
+(5) Pcs Price !!!!!!!!!
+
+
+(6) Packaging cost
+
+6.1-Per Part Pcs:
+6.1.1 Packaging maintenance
+6.1.2 Empties scrapping (cardboard/paper)
+
+6.2-Standard packaging (Plant):
+6.2.1 Packaging Type (box) - (Selection form)
+6.2.2 Filling Quantity (pcs/box)
+6.2.3 LU type (pallet) - (Selection form)
+6.2.4 Filling Qty (pcs/LU) oversea packaging
+6.2.5 price additional packaging (inlays,etc…)
+
+6.3-Special Packaging (CoC)
+6.3.1 Special packaging needed (Y/N) - (Selection form)
+6.3.2 Special packaging type - (Selection form)
+6.3.3 Filling Quantity (pcs/tray)
+6.3.4 Tooling cost
+6.3.5 additional packaging for SP needed (pallet, cover) - (Selection form)
+6.3.6 No. of Trays per SP-pallet
+6.3.7 No. of SP-pallets per LU
+
+6.4-Total Packaging Loop
+6.4.1 goods receipt
+6.4.2 stock 
+6.4.3 production
+6.4.4 empties
+6.4.5 cleaning
+6.4.6 dispatch
+6.4.7 empties transit KB to supplier
+6.4.8 empties receipt
+6.4.9 empties stock
+6.4.10 production
+6.4.11 stock finished parts
+6.4.12 dispatch
+6.4.13 transit supplier to KB
+
+
+(7) Repacking cost
+
+7.1 Repacking cost / hr
+7.2 Type of goods - (selection form)
+7.3 Repacking cost per LU
+
+
+(8) Customs cost 
+
+8.1 Customs Preference Usage (y/n) - (Selection form)
+8.2 HS code
+8.3 Duty rate (% of pcs price)
+8.4 Tariff rate (% of pcs price)
+
+
+(9) Transport cost 
+
+9.1 Transportation mode I - (Selection form)
+9.2 Transportation mode II - (Selection form)
+9.3 Transportation cost per LU
+9.4 Transportation Cost Bonded Warehouse per LU
+9.5 Stackability Factor - (Selection form)
+
+
+(10) Annual CO2 cost 
+
+10.1 CO2 cost per ton - (Selection form)
+
+
+(11) Warehouse cost
+
+11.1 Cost per storage location (monthly)
+
+
+(12) Inventory Interest
+
+12.1 Inventory Interest Rate
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+CALCULATIONS:
+---------------
+Later after the first 2 steps...
+
