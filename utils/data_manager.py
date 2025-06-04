@@ -2,7 +2,7 @@
 Data Manager for Logistics Cost Application
 
 This module handles all data storage, retrieval, and management operations
-for materials, suppliers, packaging, transport, and warehouse configurations.
+for materials, suppliers, packaging, transport, warehouse, and all other configurations.
 """
 
 import json
@@ -20,16 +20,33 @@ class DataManager:
         """Initialize session state variables if they don't exist."""
         import streamlit as st
         
+        # Core data
         if 'materials' not in st.session_state:
             st.session_state.materials = []
         if 'suppliers' not in st.session_state:
             st.session_state.suppliers = []
-        if 'packaging_configs' not in st.session_state:
-            st.session_state.packaging_configs = []
-        if 'transport_configs' not in st.session_state:
-            st.session_state.transport_configs = []
-        if 'warehouse_configs' not in st.session_state:
-            st.session_state.warehouse_configs = []
+        
+        # Configuration data
+        if 'locations' not in st.session_state:
+            st.session_state.locations = []
+        if 'operations' not in st.session_state:
+            st.session_state.operations = []
+        if 'packaging' not in st.session_state:
+            st.session_state.packaging = []
+        if 'repacking' not in st.session_state:
+            st.session_state.repacking = []
+        if 'customs' not in st.session_state:
+            st.session_state.customs = []
+        if 'transport' not in st.session_state:
+            st.session_state.transport = []
+        if 'co2' not in st.session_state:
+            st.session_state.co2 = []
+        if 'warehouse' not in st.session_state:
+            st.session_state.warehouse = []
+        if 'interest' not in st.session_state:
+            st.session_state.interest = []
+        if 'additional_costs' not in st.session_state:
+            st.session_state.additional_costs = []
     
     # Material management
     def add_material(self, material_data: Dict[str, Any]) -> bool:
@@ -80,18 +97,10 @@ class DataManager:
                 if m['material_no'] != material_no
             ]
             
-            # Remove associated configurations
-            st.session_state.packaging_configs = [
-                p for p in st.session_state.packaging_configs 
-                if p['material_id'] != material_no
-            ]
-            st.session_state.transport_configs = [
-                t for t in st.session_state.transport_configs 
-                if t['material_id'] != material_no
-            ]
-            st.session_state.warehouse_configs = [
-                w for w in st.session_state.warehouse_configs 
-                if w['material_id'] != material_no
+            # Remove associated transport configs
+            st.session_state.transport = [
+                t for t in st.session_state.transport 
+                if t.get('material_id') != material_no
             ]
             
             return True
@@ -147,30 +156,103 @@ class DataManager:
                 if s['vendor_id'] != vendor_id
             ]
             
-            # Remove associated configurations
-            st.session_state.packaging_configs = [
-                p for p in st.session_state.packaging_configs 
-                if p['supplier_id'] != vendor_id
-            ]
-            st.session_state.transport_configs = [
-                t for t in st.session_state.transport_configs 
-                if t['supplier_id'] != vendor_id
-            ]
-            st.session_state.warehouse_configs = [
-                w for w in st.session_state.warehouse_configs 
-                if w['supplier_id'] != vendor_id
+            # Remove associated transport configs
+            st.session_state.transport = [
+                t for t in st.session_state.transport 
+                if t.get('supplier_id') != vendor_id
             ]
             
             return True
         except Exception:
             return False
     
-    # Packaging configuration management
-    def add_packaging(self, packaging_data: Dict[str, Any]) -> bool:
-        """Add a new packaging configuration."""
+    # Location management
+    def add_location(self, location_data: Dict[str, Any]) -> bool:
+        """Add a new location."""
         import streamlit as st
         try:
-            st.session_state.packaging_configs.append(packaging_data)
+            st.session_state.locations.append(location_data)
+            return True
+        except Exception:
+            return False
+    
+    def get_locations(self) -> List[Dict[str, Any]]:
+        """Get all locations."""
+        import streamlit as st
+        return st.session_state.locations
+    
+    def location_exists(self, plant: str) -> bool:
+        """Check if a location exists."""
+        import streamlit as st
+        return any(loc['plant'] == plant for loc in st.session_state.locations)
+    
+    def update_location(self, plant: str, updated_data: Dict[str, Any]) -> bool:
+        """Update an existing location."""
+        import streamlit as st
+        try:
+            for i, loc in enumerate(st.session_state.locations):
+                if loc['plant'] == plant:
+                    st.session_state.locations[i] = updated_data
+                    return True
+            return False
+        except Exception:
+            return False
+    
+    def remove_location(self, plant: str) -> bool:
+        """Remove a location."""
+        import streamlit as st
+        try:
+            st.session_state.locations = [
+                loc for loc in st.session_state.locations 
+                if loc['plant'] != plant
+            ]
+            return True
+        except Exception:
+            return False
+    
+    # Operations management
+    def add_operations(self, operations_data: Dict[str, Any]) -> bool:
+        """Add new operations configuration."""
+        import streamlit as st
+        try:
+            st.session_state.operations.append(operations_data)
+            return True
+        except Exception:
+            return False
+    
+    def get_operations(self) -> List[Dict[str, Any]]:
+        """Get all operations configurations."""
+        import streamlit as st
+        return st.session_state.operations
+    
+    def update_operations(self, index: int, updated_data: Dict[str, Any]) -> bool:
+        """Update operations configuration by index."""
+        import streamlit as st
+        try:
+            if 0 <= index < len(st.session_state.operations):
+                st.session_state.operations[index] = updated_data
+                return True
+            return False
+        except Exception:
+            return False
+    
+    def remove_operations(self, index: int) -> bool:
+        """Remove operations configuration by index."""
+        import streamlit as st
+        try:
+            if 0 <= index < len(st.session_state.operations):
+                st.session_state.operations.pop(index)
+                return True
+            return False
+        except Exception:
+            return False
+    
+    # Packaging management
+    def add_packaging(self, packaging_data: Dict[str, Any]) -> bool:
+        """Add new packaging configuration."""
+        import streamlit as st
+        try:
+            st.session_state.packaging.append(packaging_data)
             return True
         except Exception:
             return False
@@ -178,50 +260,117 @@ class DataManager:
     def get_packaging(self) -> List[Dict[str, Any]]:
         """Get all packaging configurations."""
         import streamlit as st
-        return st.session_state.packaging_configs
+        return st.session_state.packaging
     
-    def get_packaging_config(self, material_id: str, supplier_id: str) -> Optional[Dict[str, Any]]:
-        """Get packaging configuration for a specific material-supplier combination."""
-        import streamlit as st
-        for config in st.session_state.packaging_configs:
-            if config['material_id'] == material_id and config['supplier_id'] == supplier_id:
-                return config
-        return None
-    
-    def packaging_exists(self, material_id: str, supplier_id: str) -> bool:
-        """Check if packaging configuration exists for a material-supplier combination."""
-        return self.get_packaging_config(material_id, supplier_id) is not None
-    
-    def update_packaging(self, material_id: str, supplier_id: str, updated_data: Dict[str, Any]) -> bool:
-        """Update an existing packaging configuration."""
+    def update_packaging(self, index: int, updated_data: Dict[str, Any]) -> bool:
+        """Update packaging configuration by index."""
         import streamlit as st
         try:
-            for i, config in enumerate(st.session_state.packaging_configs):
-                if config['material_id'] == material_id and config['supplier_id'] == supplier_id:
-                    st.session_state.packaging_configs[i] = updated_data
+            if 0 <= index < len(st.session_state.packaging):
+                st.session_state.packaging[index] = updated_data
+                return True
+            return False
+        except Exception:
+            return False
+    
+    def remove_packaging(self, index: int) -> bool:
+        """Remove packaging configuration by index."""
+        import streamlit as st
+        try:
+            if 0 <= index < len(st.session_state.packaging):
+                st.session_state.packaging.pop(index)
+                return True
+            return False
+        except Exception:
+            return False
+    
+    # Repacking management
+    def add_repacking(self, repacking_data: Dict[str, Any]) -> bool:
+        """Add new repacking configuration."""
+        import streamlit as st
+        try:
+            st.session_state.repacking.append(repacking_data)
+            return True
+        except Exception:
+            return False
+    
+    def get_repacking(self) -> List[Dict[str, Any]]:
+        """Get all repacking configurations."""
+        import streamlit as st
+        return st.session_state.repacking
+    
+    def update_repacking(self, index: int, updated_data: Dict[str, Any]) -> bool:
+        """Update repacking configuration by index."""
+        import streamlit as st
+        try:
+            if 0 <= index < len(st.session_state.repacking):
+                st.session_state.repacking[index] = updated_data
+                return True
+            return False
+        except Exception:
+            return False
+    
+    def remove_repacking(self, index: int) -> bool:
+        """Remove repacking configuration by index."""
+        import streamlit as st
+        try:
+            if 0 <= index < len(st.session_state.repacking):
+                st.session_state.repacking.pop(index)
+                return True
+            return False
+        except Exception:
+            return False
+    
+    # Customs management
+    def add_customs(self, customs_data: Dict[str, Any]) -> bool:
+        """Add new customs configuration."""
+        import streamlit as st
+        try:
+            st.session_state.customs.append(customs_data)
+            return True
+        except Exception:
+            return False
+    
+    def get_customs(self) -> List[Dict[str, Any]]:
+        """Get all customs configurations."""
+        import streamlit as st
+        return st.session_state.customs
+    
+    def customs_exists(self, hs_code: str) -> bool:
+        """Check if customs configuration exists for HS code."""
+        import streamlit as st
+        return any(c['hs_code'] == hs_code for c in st.session_state.customs)
+    
+    def update_customs(self, hs_code: str, updated_data: Dict[str, Any]) -> bool:
+        """Update customs configuration by HS code."""
+        import streamlit as st
+        try:
+            for i, customs in enumerate(st.session_state.customs):
+                if customs['hs_code'] == hs_code:
+                    st.session_state.customs[i] = updated_data
                     return True
             return False
         except Exception:
             return False
     
-    def remove_packaging(self, material_id: str, supplier_id: str) -> bool:
-        """Remove a packaging configuration."""
+    def remove_customs(self, hs_code: str) -> bool:
+        """Remove customs configuration by HS code."""
         import streamlit as st
         try:
-            st.session_state.packaging_configs = [
-                p for p in st.session_state.packaging_configs 
-                if not (p['material_id'] == material_id and p['supplier_id'] == supplier_id)
+            st.session_state.customs = [
+                c for c in st.session_state.customs 
+                if c['hs_code'] != hs_code
             ]
             return True
         except Exception:
             return False
     
-    # Transport configuration management
+    # Transport management (updated for new structure)
     def add_transport(self, transport_data: Dict[str, Any]) -> bool:
-        """Add a new transport configuration."""
+        """Add new transport configuration."""
         import streamlit as st
         try:
-            st.session_state.transport_configs.append(transport_data)
+            st.session_state.transport.append(transport_data)
             return True
         except Exception:
             return False
@@ -229,50 +378,78 @@ class DataManager:
     def get_transport(self) -> List[Dict[str, Any]]:
         """Get all transport configurations."""
         import streamlit as st
-        return st.session_state.transport_configs
-    
-    def get_transport_config(self, material_id: str, supplier_id: str) -> Optional[Dict[str, Any]]:
-        """Get transport configuration for a specific material-supplier combination."""
-        import streamlit as st
-        for config in st.session_state.transport_configs:
-            if config['material_id'] == material_id and config['supplier_id'] == supplier_id:
-                return config
-        return None
+        return st.session_state.transport
     
     def transport_exists(self, material_id: str, supplier_id: str) -> bool:
-        """Check if transport configuration exists for a material-supplier combination."""
-        return self.get_transport_config(material_id, supplier_id) is not None
-    
-    def update_transport(self, material_id: str, supplier_id: str, updated_data: Dict[str, Any]) -> bool:
-        """Update an existing transport configuration."""
+        """Check if transport configuration exists for material-supplier pair."""
         import streamlit as st
-        try:
-            for i, config in enumerate(st.session_state.transport_configs):
-                if config['material_id'] == material_id and config['supplier_id'] == supplier_id:
-                    st.session_state.transport_configs[i] = updated_data
-                    return True
-            return False
-        except Exception:
-            return False
+        return any(
+            t.get('material_id') == material_id and t.get('supplier_id') == supplier_id 
+            for t in st.session_state.transport
+        )
     
     def remove_transport(self, material_id: str, supplier_id: str) -> bool:
-        """Remove a transport configuration."""
+        """Remove transport configuration for material-supplier pair."""
         import streamlit as st
         try:
-            st.session_state.transport_configs = [
-                t for t in st.session_state.transport_configs 
-                if not (t['material_id'] == material_id and t['supplier_id'] == supplier_id)
+            st.session_state.transport = [
+                t for t in st.session_state.transport 
+                if not (t.get('material_id') == material_id and t.get('supplier_id') == supplier_id)
             ]
             return True
         except Exception:
             return False
     
-    # Warehouse configuration management
-    def add_warehouse(self, warehouse_data: Dict[str, Any]) -> bool:
-        """Add a new warehouse configuration."""
+    # CO2 management
+    def add_co2(self, co2_data: Dict[str, Any]) -> bool:
+        """Add CO2 configuration."""
         import streamlit as st
         try:
-            st.session_state.warehouse_configs.append(warehouse_data)
+            st.session_state.co2.append(co2_data)
+            return True
+        except Exception:
+            return False
+    
+    def get_co2(self) -> List[Dict[str, Any]]:
+        """Get all CO2 configurations."""
+        import streamlit as st
+        return st.session_state.co2
+    
+    def co2_exists(self) -> bool:
+        """Check if CO2 configuration exists."""
+        import streamlit as st
+        return len(st.session_state.co2) > 0
+    
+    def update_co2(self, cost_per_ton: float, updated_data: Dict[str, Any]) -> bool:
+        """Update CO2 configuration."""
+        import streamlit as st
+        try:
+            for i, co2 in enumerate(st.session_state.co2):
+                if co2['cost_per_ton'] == cost_per_ton:
+                    st.session_state.co2[i] = updated_data
+                    return True
+            return False
+        except Exception:
+            return False
+    
+    def remove_co2(self, cost_per_ton: float) -> bool:
+        """Remove CO2 configuration."""
+        import streamlit as st
+        try:
+            st.session_state.co2 = [
+                c for c in st.session_state.co2 
+                if c['cost_per_ton'] != cost_per_ton
+            ]
+            return True
+        except Exception:
+            return False
+    
+    # Warehouse management
+    def add_warehouse(self, warehouse_data: Dict[str, Any]) -> bool:
+        """Add warehouse configuration."""
+        import streamlit as st
+        try:
+            st.session_state.warehouse.append(warehouse_data)
             return True
         except Exception:
             return False
@@ -280,39 +457,120 @@ class DataManager:
     def get_warehouse(self) -> List[Dict[str, Any]]:
         """Get all warehouse configurations."""
         import streamlit as st
-        return st.session_state.warehouse_configs
+        return st.session_state.warehouse
     
-    def get_warehouse_config(self, material_id: str, supplier_id: str) -> Optional[Dict[str, Any]]:
-        """Get warehouse configuration for a specific material-supplier combination."""
+    def warehouse_exists(self) -> bool:
+        """Check if warehouse configuration exists."""
         import streamlit as st
-        for config in st.session_state.warehouse_configs:
-            if config['material_id'] == material_id and config['supplier_id'] == supplier_id:
-                return config
-        return None
+        return len(st.session_state.warehouse) > 0
     
-    def warehouse_exists(self, material_id: str, supplier_id: str) -> bool:
-        """Check if warehouse configuration exists for a material-supplier combination."""
-        return self.get_warehouse_config(material_id, supplier_id) is not None
-    
-    def update_warehouse(self, material_id: str, supplier_id: str, updated_data: Dict[str, Any]) -> bool:
-        """Update an existing warehouse configuration."""
+    def update_warehouse(self, cost_per_loc: float, updated_data: Dict[str, Any]) -> bool:
+        """Update warehouse configuration."""
         import streamlit as st
         try:
-            for i, config in enumerate(st.session_state.warehouse_configs):
-                if config['material_id'] == material_id and config['supplier_id'] == supplier_id:
-                    st.session_state.warehouse_configs[i] = updated_data
+            for i, wh in enumerate(st.session_state.warehouse):
+                if wh['cost_per_loc'] == cost_per_loc:
+                    st.session_state.warehouse[i] = updated_data
                     return True
             return False
         except Exception:
             return False
     
-    def remove_warehouse(self, material_id: str, supplier_id: str) -> bool:
-        """Remove a warehouse configuration."""
+    def remove_warehouse(self, cost_per_loc: float) -> bool:
+        """Remove warehouse configuration."""
         import streamlit as st
         try:
-            st.session_state.warehouse_configs = [
-                w for w in st.session_state.warehouse_configs 
-                if not (w['material_id'] == material_id and w['supplier_id'] == supplier_id)
+            st.session_state.warehouse = [
+                w for w in st.session_state.warehouse 
+                if w['cost_per_loc'] != cost_per_loc
+            ]
+            return True
+        except Exception:
+            return False
+    
+    # Interest management
+    def add_interest(self, interest_data: Dict[str, Any]) -> bool:
+        """Add interest configuration."""
+        import streamlit as st
+        try:
+            st.session_state.interest.append(interest_data)
+            return True
+        except Exception:
+            return False
+    
+    def get_interest(self) -> List[Dict[str, Any]]:
+        """Get all interest configurations."""
+        import streamlit as st
+        return st.session_state.interest
+    
+    def interest_exists(self) -> bool:
+        """Check if interest configuration exists."""
+        import streamlit as st
+        return len(st.session_state.interest) > 0
+    
+    def update_interest(self, rate: float, updated_data: Dict[str, Any]) -> bool:
+        """Update interest configuration."""
+        import streamlit as st
+        try:
+            for i, intr in enumerate(st.session_state.interest):
+                if intr['rate'] == rate:
+                    st.session_state.interest[i] = updated_data
+                    return True
+            return False
+        except Exception:
+            return False
+    
+    def remove_interest(self, rate: float) -> bool:
+        """Remove interest configuration."""
+        import streamlit as st
+        try:
+            st.session_state.interest = [
+                i for i in st.session_state.interest 
+                if i['rate'] != rate
+            ]
+            return True
+        except Exception:
+            return False
+    
+    # Additional costs management
+    def add_additional_cost(self, cost_data: Dict[str, Any]) -> bool:
+        """Add additional cost item."""
+        import streamlit as st
+        try:
+            st.session_state.additional_costs.append(cost_data)
+            return True
+        except Exception:
+            return False
+    
+    def get_additional_costs(self) -> List[Dict[str, Any]]:
+        """Get all additional cost items."""
+        import streamlit as st
+        return st.session_state.additional_costs
+    
+    def additional_cost_exists(self, cost_name: str) -> bool:
+        """Check if additional cost exists."""
+        import streamlit as st
+        return any(c['cost_name'] == cost_name for c in st.session_state.additional_costs)
+    
+    def update_additional_cost(self, cost_name: str, updated_data: Dict[str, Any]) -> bool:
+        """Update additional cost item."""
+        import streamlit as st
+        try:
+            for i, cost in enumerate(st.session_state.additional_costs):
+                if cost['cost_name'] == cost_name:
+                    st.session_state.additional_costs[i] = updated_data
+                    return True
+            return False
+        except Exception:
+            return False
+    
+    def remove_additional_cost(self, cost_name: str) -> bool:
+        """Remove additional cost item."""
+        import streamlit as st
+        try:
+            st.session_state.additional_costs = [
+                c for c in st.session_state.additional_costs 
+                if c['cost_name'] != cost_name
             ]
             return True
         except Exception:
@@ -325,31 +583,27 @@ class DataManager:
         
         materials = st.session_state.materials
         suppliers = st.session_state.suppliers
-        packaging_configs = st.session_state.packaging_configs
-        transport_configs = st.session_state.transport_configs
-        warehouse_configs = st.session_state.warehouse_configs
         
-        if not (materials and suppliers and packaging_configs and transport_configs and warehouse_configs):
+        # Need at least one material and supplier
+        if not (materials and suppliers):
+            return False
+        
+        # Need at least one transport configuration
+        transport_configs = st.session_state.transport
+        if not transport_configs:
             return False
         
         # Check if at least one complete configuration exists
-        for material in materials:
-            for supplier in suppliers:
-                has_packaging = any(
-                    p['material_id'] == material['material_no'] and p['supplier_id'] == supplier['vendor_id']
-                    for p in packaging_configs
-                )
-                has_transport = any(
-                    t['material_id'] == material['material_no'] and t['supplier_id'] == supplier['vendor_id']
-                    for t in transport_configs
-                )
-                has_warehouse = any(
-                    w['material_id'] == material['material_no'] and w['supplier_id'] == supplier['vendor_id']
-                    for w in warehouse_configs
-                )
-                
-                if has_packaging and has_transport and has_warehouse:
-                    return True
+        for transport in transport_configs:
+            material_id = transport.get('material_id')
+            supplier_id = transport.get('supplier_id')
+            
+            # Verify material and supplier exist
+            material_exists = any(m['material_no'] == material_id for m in materials)
+            supplier_exists = any(s['vendor_id'] == supplier_id for s in suppliers)
+            
+            if material_exists and supplier_exists:
+                return True
         
         return False
     
@@ -359,9 +613,16 @@ class DataManager:
         try:
             st.session_state.materials = []
             st.session_state.suppliers = []
-            st.session_state.packaging_configs = []
-            st.session_state.transport_configs = []
-            st.session_state.warehouse_configs = []
+            st.session_state.locations = []
+            st.session_state.operations = []
+            st.session_state.packaging = []
+            st.session_state.repacking = []
+            st.session_state.customs = []
+            st.session_state.transport = []
+            st.session_state.co2 = []
+            st.session_state.warehouse = []
+            st.session_state.interest = []
+            st.session_state.additional_costs = []
             return True
         except Exception:
             return False
@@ -373,9 +634,16 @@ class DataManager:
         export_data = {
             'materials': st.session_state.materials,
             'suppliers': st.session_state.suppliers,
-            'packaging_configs': st.session_state.packaging_configs,
-            'transport_configs': st.session_state.transport_configs,
-            'warehouse_configs': st.session_state.warehouse_configs,
+            'locations': st.session_state.locations,
+            'operations': st.session_state.operations,
+            'packaging': st.session_state.packaging,
+            'repacking': st.session_state.repacking,
+            'customs': st.session_state.customs,
+            'transport': st.session_state.transport,
+            'co2': st.session_state.co2,
+            'warehouse': st.session_state.warehouse,
+            'interest': st.session_state.interest,
+            'additional_costs': st.session_state.additional_costs,
             'export_timestamp': str(__import__('datetime').datetime.now())
         }
         
@@ -389,17 +657,19 @@ class DataManager:
             # Parse JSON data
             data = json.loads(json_data.decode('utf-8'))
             
-            # Validate required keys
-            required_keys = ['materials', 'suppliers', 'packaging_configs', 'transport_configs', 'warehouse_configs']
-            if not all(key in data for key in required_keys):
-                return False
-            
-            # Import data
-            st.session_state.materials = data['materials']
-            st.session_state.suppliers = data['suppliers']
-            st.session_state.packaging_configs = data['packaging_configs']
-            st.session_state.transport_configs = data['transport_configs']
-            st.session_state.warehouse_configs = data['warehouse_configs']
+            # Import all data types
+            st.session_state.materials = data.get('materials', [])
+            st.session_state.suppliers = data.get('suppliers', [])
+            st.session_state.locations = data.get('locations', [])
+            st.session_state.operations = data.get('operations', [])
+            st.session_state.packaging = data.get('packaging', [])
+            st.session_state.repacking = data.get('repacking', [])
+            st.session_state.customs = data.get('customs', [])
+            st.session_state.transport = data.get('transport', [])
+            st.session_state.co2 = data.get('co2', [])
+            st.session_state.warehouse = data.get('warehouse', [])
+            st.session_state.interest = data.get('interest', [])
+            st.session_state.additional_costs = data.get('additional_costs', [])
             
             return True
             
@@ -413,30 +683,30 @@ class DataManager:
         stats = {
             'total_materials': len(st.session_state.materials),
             'total_suppliers': len(st.session_state.suppliers),
-            'total_packaging_configs': len(st.session_state.packaging_configs),
-            'total_transport_configs': len(st.session_state.transport_configs),
-            'total_warehouse_configs': len(st.session_state.warehouse_configs),
+            'total_locations': len(st.session_state.locations),
+            'total_operations': len(st.session_state.operations),
+            'total_packaging': len(st.session_state.packaging),
+            'total_repacking': len(st.session_state.repacking),
+            'total_customs': len(st.session_state.customs),
+            'total_transport': len(st.session_state.transport),
+            'total_co2': len(st.session_state.co2),
+            'total_warehouse': len(st.session_state.warehouse),
+            'total_interest': len(st.session_state.interest),
+            'total_additional_costs': len(st.session_state.additional_costs),
             'calculation_ready': self.is_calculation_ready()
         }
         
         # Calculate complete configurations
         complete_configs = 0
-        for material in st.session_state.materials:
-            for supplier in st.session_state.suppliers:
-                has_packaging = any(
-                    p['material_id'] == material['material_no'] and p['supplier_id'] == supplier['vendor_id']
-                    for p in st.session_state.packaging_configs
-                )
-                has_transport = any(
-                    t['material_id'] == material['material_no'] and t['supplier_id'] == supplier['vendor_id']
-                    for t in st.session_state.transport_configs
-                )
-                has_warehouse = any(
-                    w['material_id'] == material['material_no'] and w['supplier_id'] == supplier['vendor_id']
-                    for w in st.session_state.warehouse_configs
-                )
+        if st.session_state.transport:
+            for transport in st.session_state.transport:
+                material_id = transport.get('material_id')
+                supplier_id = transport.get('supplier_id')
                 
-                if has_packaging and has_transport and has_warehouse:
+                material_exists = any(m['material_no'] == material_id for m in st.session_state.materials)
+                supplier_exists = any(s['vendor_id'] == supplier_id for s in st.session_state.suppliers)
+                
+                if material_exists and supplier_exists:
                     complete_configs += 1
         
         stats['complete_configurations'] = complete_configs

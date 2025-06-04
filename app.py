@@ -1,9 +1,9 @@
+# app.py
 import streamlit as st
 import pandas as pd
 from utils.data_manager import DataManager
-from utils.calculations import LogisticsCostCalculator
 
-# Initialize data manager
+# Initialize data manager in session_state
 if 'data_manager' not in st.session_state:
     st.session_state.data_manager = DataManager()
 
@@ -14,74 +14,84 @@ def main():
         layout="wide",
         initial_sidebar_state="expanded"
     )
-    
+
     st.title("Logistics Cost Estimation")
     st.markdown("---")
-    
-    # Sidebar navigation info
+
+    # Sidebar navigation info - now extended for your new pages
     st.sidebar.title("Navigation")
     st.sidebar.markdown("""
     Use the pages on the left to navigate through the application:
-    
-    1. **Material Information** - Enter material details
-    2. **Supplier Information** - Vendor and location data
-    3. **Packaging Costs** - Packaging parameters
-    4. **Transport Costs** - Transport mode and costs
-    5. **Warehouse Costs** - Storage and inventory costs
-    6. **Cost Calculation** - View final calculations and export
+
+    1. **Material Information** - Enter material details  
+    2. **Supplier Information** - Vendor and location data  
+    3. **KB/Bendix Location Info** - Plant, country, and distance  
+    4. **Operations Information** - Incoterms, lead times, classifications  
+    5. **Packaging Costs** - Standard & special packaging, loops  
+    6. **Repacking Cost**  
+    7. **Customs Cost**  
+    8. **Transport Cost**  
+    9. **Annual CO₂ Cost**  
+    10. **Warehouse Cost**  
+    11. **Inventory Cost**  
+    12. **Inventory Interest**  
+    13. **Additional Cost**  
+    14. **Cost Calculation** - View final calculations and export  
     """)
-    
-    # Main dashboard
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.metric(
-            label="Materials Configured",
-            value=len(st.session_state.data_manager.get_materials())
-        )
-    
-    with col2:
-        st.metric(
-            label="Suppliers Configured", 
-            value=len(st.session_state.data_manager.get_suppliers())
-        )
-    
-    with col3:
-        calculations_ready = st.session_state.data_manager.is_calculation_ready()
-        st.metric(
-            label="Calculation Status",
-            value="Ready" if calculations_ready else "Pending"
-        )
-    
+
+    # Main dashboard: Show status of all major config types
+    dashboard_columns = [
+        ("Materials", st.session_state.data_manager.get_materials()),
+        ("Suppliers", st.session_state.data_manager.get_suppliers()),
+        ("Locations", getattr(st.session_state.data_manager, "get_locations", lambda: [])()),
+        ("Operations", getattr(st.session_state.data_manager, "get_operations", lambda: [])()),
+        ("Packaging", st.session_state.data_manager.get_packaging()),
+        ("Repacking", getattr(st.session_state.data_manager, "get_repacking", lambda: [])()),
+        ("Customs", getattr(st.session_state.data_manager, "get_customs", lambda: [])()),
+        ("Transport", st.session_state.data_manager.get_transport()),
+        ("CO₂", getattr(st.session_state.data_manager, "get_co2", lambda: [])()),
+        ("Warehouse", st.session_state.data_manager.get_warehouse()),
+        ("Inventory", getattr(st.session_state.data_manager, "get_inventory", lambda: [])()),
+        ("Interest", getattr(st.session_state.data_manager, "get_interest", lambda: [])()),
+        ("Additional Cost", getattr(st.session_state.data_manager, "get_additional_costs", lambda: [])()),
+    ]
+
+    st.subheader("📦 Configuration Status Overview")
+    # Display metrics in 4 columns at a time for a nice grid
+    n_cols = 4
+    for i in range(0, len(dashboard_columns), n_cols):
+        cols = st.columns(n_cols)
+        for j, (label, entries) in enumerate(dashboard_columns[i:i+n_cols]):
+            with cols[j]:
+                st.metric(label, len(entries) if entries is not None else 0)
+
     st.markdown("---")
-    
-    # Overview of current data
     st.header("Current Configuration Overview")
-    
-    # Material overview
-    materials = st.session_state.data_manager.get_materials()
-    if materials:
-        st.subheader("Materials")
-        df_materials = pd.DataFrame(materials)
-        st.dataframe(df_materials, use_container_width=True)
-    else:
-        st.info("No materials configured yet. Please use the Material Information page to add materials.")
-    
-    # Supplier overview
-    suppliers = st.session_state.data_manager.get_suppliers()
-    if suppliers:
-        st.subheader("Suppliers")
-        df_suppliers = pd.DataFrame(suppliers)
-        st.dataframe(df_suppliers, use_container_width=True)
-    else:
-        st.info("No suppliers configured yet. Please use the Supplier Information page to add suppliers.")
-    
-    # Quick actions
+
+    # Display DataFrames for key configs
+    config_sections = [
+        ("Materials", st.session_state.data_manager.get_materials()),
+        ("Suppliers", st.session_state.data_manager.get_suppliers()),
+        ("Locations", getattr(st.session_state.data_manager, "get_locations", lambda: [])()),
+        ("Operations", getattr(st.session_state.data_manager, "get_operations", lambda: [])()),
+        ("Packaging", st.session_state.data_manager.get_packaging()),
+        ("Repacking", getattr(st.session_state.data_manager, "get_repacking", lambda: [])()),
+        ("Customs", getattr(st.session_state.data_manager, "get_customs", lambda: [])()),
+        ("Transport", st.session_state.data_manager.get_transport()),
+        ("Warehouse", st.session_state.data_manager.get_warehouse()),
+        # Add more if you wish (CO2, inventory, interest, etc.)
+    ]
+    for name, data in config_sections:
+        if data and len(data) > 0:
+            st.subheader(name)
+            df = pd.DataFrame(data)
+            st.dataframe(df, use_container_width=True)
+        else:
+            st.info(f"No {name.lower()} configured yet. Please use the {name} page to add {name.lower()}.")
+
     st.markdown("---")
     st.header("Quick Actions")
-    
     col1, col2, col3 = st.columns(3)
-    
     with col1:
         if st.button("Clear All Data", type="secondary"):
             if st.session_state.get('confirm_clear', False):
@@ -92,7 +102,7 @@ def main():
             else:
                 st.session_state.confirm_clear = True
                 st.warning("Click again to confirm clearing all data")
-    
+
     with col2:
         if st.button("Export Configuration", type="secondary"):
             config_data = st.session_state.data_manager.export_configuration()
@@ -102,7 +112,7 @@ def main():
                 file_name="logistics_config.json",
                 mime="application/json"
             )
-    
+
     with col3:
         uploaded_file = st.file_uploader(
             "Import Configuration",
