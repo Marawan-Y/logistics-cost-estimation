@@ -14,7 +14,7 @@ A comprehensive web application designed to automate logistics cost calculations
 - [Contributing](#contributing)
 - [License](#license)
 
-## 🔍 Overview
+##  Overview
 
 This application streamlines the logistics cost calculation process by providing:
 - Automated data collection and validation
@@ -23,7 +23,7 @@ This application streamlines the logistics cost calculation process by providing
 - Export capabilities for results
 - Real-time cost analysis and reporting
 
-## ✨ Features
+##  Features
 
 - **Material Management**: Configure material specifications, weights, and volumes
 - **Supplier Information**: Manage vendor details, locations, and Incoterms
@@ -34,12 +34,12 @@ This application streamlines the logistics cost calculation process by providing
 - **Data Export**: Export results in CSV, Excel, and JSON formats
 - **Configuration Management**: Save and load application configurations
 
-## 📋 Prerequisites
+##  Prerequisites
 
 - Python 3.8 or higher
 - Web browser (Chrome, Firefox, Safari, or Edge)
 
-## 🚀 Installation & Setup
+##  Installation & Setup
 
 ### Manual Setup (Local Development)
 
@@ -57,7 +57,7 @@ pip install streamlit pandas
 streamlit run app.py --server.port 5000
 ```
 
-## 🏃‍♂️ Running the Application
+##  Running the Application
 
 ### On Replit
 
@@ -75,7 +75,7 @@ streamlit run app.py --server.port 5000
 The application will be accessible at:
 - Local: `http://0.0.0.0:5000`
 
-## 📖 User Guide
+##  User Guide
 
 ### Getting Started
 
@@ -169,7 +169,7 @@ The cost calculation provides:
 - **Total logistics cost per piece**
 - **Detailed component analysis**
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 logistics-cost-automation/
@@ -209,7 +209,7 @@ The application uses Streamlit's configuration system. Settings are defined in `
 - Configurations can be exported/imported as JSON
 - No external database required for basic operation
 
-## 🛠️ Development
+##  Development
 
 ### Adding New Features
 
@@ -226,7 +226,7 @@ Run the application and test each component:
 3. Test export/import functionality
 4. Validate error handling and edge cases
 
-## 🤝 Contributing
+##  Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -234,11 +234,11 @@ Run the application and test each component:
 4. Test thoroughly
 5. Submit a pull request
 
-## 📄 License
+##  License
 
 This project is licensed under the MIT License. See the LICENSE file for details.
 
-## 📞 Support
+##  Support
 
 For questions or issues:
 1. Check the application's built-in help text
@@ -248,4 +248,4 @@ For questions or issues:
 
 ---
 
-**Built with ❤️ using Streamlit and Python**
+**Built using Streamlit and Python**
