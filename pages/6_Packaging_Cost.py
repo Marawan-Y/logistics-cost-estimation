@@ -16,6 +16,16 @@ def main():
     dm = st.session_state.data_manager
     val = PackagingValidator()
 
+    # Pre-define loop_fields for reuse
+    loop_fields = [
+        "goods receipt", "stock raw materials", "production",
+        "empties return", "cleaning", "dispatch",
+        "empties transit (KB → Supplier)", "empties receipt (at Supplier)",
+        "empties in stock (Supplier)", "production (contrary loop)",
+        "stock finished parts", "dispatch (finished parts)",
+        "transit (Supplier → KB)"
+    ]
+
     # ---------------- Add New Packaging Record ----------------
     with st.form("pkg_form"):
         st.subheader("Add New Packaging Record")
@@ -43,7 +53,15 @@ def main():
         with col1:
             box_type = st.selectbox(
                 "Packaging Type (box)",
-                ["Cardboard", "Plastic", "Wooden", "Metal"],
+                [
+                    "None", "Cardboard S", "Cardboard M", "Cardboard L", "Cardboard XL",
+                    "Cardboard LU (ISO)", "KLT3214 / LID", "KLT4314 / LID",
+                    "KLT4328 / LID", "KLT6414 / LID", "KLT6417 / LID", "KLT6422 / LID",
+                    "KLT6428 / LID", "R-KLT6429 / LID", "ESD KLT3115 / LID",
+                    "ESD KLT4115 / LID", "ESD KLT4129 / LID", "ESD KLT 6115 / LID",
+                    "ESD KLT 6122 / LID", "ESD KLT 6129 / LID", "Green Basket / LID",
+                    "Magnum OPT", "Wooden Box", "Gitterbox (rental)", "Gitterbox", "EURO LU / LID"
+                ],
                 help="Select the type of box used"
             )
             fill_qty_box = st.number_input(
@@ -54,10 +72,10 @@ def main():
         with col2:
             pallet_type = st.selectbox(
                 "LU Type (pallet)",
-                ["EUR‐pallet", "Industrial", "Custom"],
+                ["EURO Pallet Price", "ISO Pallet Price"],
                 help="Select pallet type"
             )
-            fill_qty_lu = st.number_input(
+            fill_qty_lu_oversea = st.number_input(
                 "Filling Qty (pcs/LU) overseas",
                 min_value=0, step=1,
                 help="Number of pieces per load unit for overseas shipping"
@@ -80,7 +98,7 @@ def main():
             )
             sp_type = st.selectbox(
                 "Special packaging type",
-                ["Tray", "Blister", "Box", "Pallet Cover", "Other"],
+                ["Inlay Tray", "Inlay tray pallet size", "Standalone tray"],
                 help="Select the special packaging type"
             )
             fill_qty_tray = st.number_input(
@@ -113,14 +131,6 @@ def main():
         st.markdown("---")
         # 6.4 Total Packaging Loop (Qty of LUs at Each Stage)
         st.markdown("**6.4 ‒ Total Packaging Loop (Quantity of LUs)**")
-        loop_fields = [
-            "goods receipt", "stock raw materials", "production",
-            "empties return", "cleaning", "dispatch",
-            "empties transit (KB → Supplier)", "empties receipt (at Supplier)",
-            "empties in stock (Supplier)", "production (contrary loop)",
-            "stock finished parts", "dispatch (finished parts)",
-            "transit (Supplier → KB)"
-        ]
         loop_data = {}
         cols = st.columns(4)
         for idx, field in enumerate(loop_fields):
@@ -138,7 +148,7 @@ def main():
                 "box_type": box_type,
                 "fill_qty_box": fill_qty_box,
                 "pallet_type": pallet_type,
-                "fill_qty_lu": fill_qty_lu,
+                "fill_qty_lu_oversea": fill_qty_lu_oversea,
                 "add_pack_price": add_pack_price,
                 "sp_needed": sp_needed,
                 "sp_type": sp_type,
@@ -165,7 +175,20 @@ def main():
     packaging_list = dm.get_packaging()
     if not packaging_list:
         st.info("No packaging records configured yet.")
+
+    # Callbacks to manage edit flags
+    def enter_edit_pkg(idx):
+        st.session_state[f"edit_pkg_flag_{idx}"] = True
+
+    def exit_edit_pkg(idx):
+        st.session_state[f"edit_pkg_flag_{idx}"] = False
+
     for i, pkg in enumerate(packaging_list):
+        # Initialize flag if missing
+        flag_key = f"edit_pkg_flag_{i}"
+        if flag_key not in st.session_state:
+            st.session_state[flag_key] = False
+
         header = f"{pkg['box_type']} | {pkg['pallet_type']} | Special: {pkg['sp_needed']}"
         with st.expander(header):
             col1, col2, col3 = st.columns([3, 1, 1])
@@ -183,9 +206,12 @@ def main():
                 for stage, qty in pkg["loop_data"].items():
                     st.write(f"  • {stage.title()}: {qty}")
             with col2:
-                if st.button("Edit", key=f"edit_pkg_{i}"):
-                    st.session_state[f"edit_pkg_{i}"] = True
-                    st.rerun()
+                st.button(
+                    "Edit",
+                    key=f"edit_pkg_btn_{i}",
+                    on_click=enter_edit_pkg,
+                    args=(i,)
+                )
             with col3:
                 if st.button("Delete", key=f"del_pkg_{i}", type="secondary"):
                     dm.remove_packaging(i)
@@ -194,7 +220,7 @@ def main():
 
     # ---------------- Edit Packaging Record ----------------
     for i, pkg in enumerate(packaging_list):
-        if st.session_state.get(f"edit_pkg_{i}", False):
+        if st.session_state.get(f"edit_pkg_flag_{i}", False):
             with st.form(f"edit_pkg_form_{i}"):
                 st.subheader(f"Edit Packaging Record ({pkg['box_type']})")
 
@@ -204,12 +230,14 @@ def main():
                 with col1:
                     new_pack_maint = st.number_input(
                         "Packaging maintenance (€ per pcs)",
-                        value=pkg["pack_maint"], min_value=0.0, step=0.001, format="%.3f"
+                        value=pkg["pack_maint"], min_value=0.0, step=0.001, format="%.3f",
+                        key=f"new_pack_maint_{i}"
                     )
                 with col2:
                     new_empties_scrap = st.number_input(
                         "Empties scrapping (€ per pcs)",
-                        value=pkg["empties_scrap"], min_value=0.0, step=0.001, format="%.3f"
+                        value=pkg["empties_scrap"], min_value=0.0, step=0.001, format="%.3f",
+                        key=f"new_empties_scrap_{i}"
                     )
 
                 st.markdown("---")
@@ -217,28 +245,51 @@ def main():
                 st.markdown("**6.2 ‒ Standard Packaging (Plant)**")
                 col1, col2 = st.columns(2)
                 with col1:
+                    box_options = [
+                        "None", "Cardboard S", "Cardboard M", "Cardboard L", "Cardboard XL",
+                        "Cardboard LU (ISO)", "KLT3214 / LID", "KLT4314 / LID",
+                        "KLT4328 / LID", "KLT6414 / LID", "KLT6417 / LID", "KLT6422 / LID",
+                        "KLT6428 / LID", "R-KLT6429 / LID", "ESD KLT3115 / LID",
+                        "ESD KLT4115 / LID", "ESD KLT4129 / LID", "ESD KLT 6115 / LID",
+                        "ESD KLT 6122 / LID", "ESD KLT 6129 / LID", "Green Basket / LID",
+                        "Magnum OPT", "Wooden Box", "Gitterbox (rental)", "Gitterbox", "EURO LU / LID"
+                    ]
+                    try:
+                        default_idx = box_options.index(pkg["box_type"])
+                    except ValueError:
+                        default_idx = 0
                     new_box_type = st.selectbox(
                         "Packaging Type (box)",
-                        ["Cardboard", "Plastic", "Wooden", "Metal"],
-                        index=["Cardboard", "Plastic", "Wooden", "Metal"].index(pkg["box_type"])
+                        box_options,
+                        index=default_idx,
+                        key=f"new_box_type_{i}"
                     )
                     new_fill_qty_box = st.number_input(
                         "Filling Quantity (pcs/box)",
-                        value=pkg["fill_qty_box"], min_value=0, step=1
+                        value=pkg["fill_qty_box"], min_value=0, step=1,
+                        key=f"new_fill_qty_box_{i}"
                     )
                 with col2:
+                    pallet_options = ["EURO Pallet Price", "ISO Pallet Price"]
+                    try:
+                        pal_idx = pallet_options.index(pkg["pallet_type"])
+                    except ValueError:
+                        pal_idx = 0
                     new_pallet_type = st.selectbox(
                         "LU Type (pallet)",
-                        ["EUR‐pallet", "Industrial", "Custom"],
-                        index=["EUR‐pallet", "Industrial", "Custom"].index(pkg["pallet_type"])
+                        pallet_options,
+                        index=pal_idx,
+                        key=f"new_pallet_type_{i}"
                     )
-                    new_fill_qty_lu = st.number_input(
+                    new_fill_qty_lu_oversea = st.number_input(
                         "Filling Qty (pcs/LU) overseas",
-                        value=pkg["fill_qty_lu"], min_value=0, step=1
+                        value=pkg["fill_qty_lu_oversea"], min_value=0, step=1,
+                        key=f"new_fill_qty_lu_oversea_{i}"
                     )
                 new_add_pack_price = st.number_input(
                     "Price additional packaging (inlays, etc.) €",
-                    value=pkg["add_pack_price"], min_value=0.0, step=0.01, format="%.2f"
+                    value=pkg["add_pack_price"], min_value=0.0, step=0.01, format="%.2f",
+                    key=f"new_add_pack_price_{i}"
                 )
 
                 st.markdown("---")
@@ -246,37 +297,59 @@ def main():
                 st.markdown("**6.3 ‒ Special Packaging (CoC)**")
                 col1, col2 = st.columns(2)
                 with col1:
+                    sp_needed_options = ["Yes", "No"]
+                    try:
+                        spn_idx = sp_needed_options.index(pkg["sp_needed"])
+                    except ValueError:
+                        spn_idx = 0
                     new_sp_needed = st.selectbox(
                         "Special packaging needed?",
-                        ["Yes", "No"],
-                        index=["Yes", "No"].index(pkg["sp_needed"])
+                        sp_needed_options,
+                        index=spn_idx,
+                        key=f"new_sp_needed_{i}"
                     )
+                    sp_type_options = ["Inlay Tray", "Inlay tray pallet size", "Standalone tray"]
+                    try:
+                        spt_idx = sp_type_options.index(pkg["sp_type"])
+                    except ValueError:
+                        spt_idx = 0
                     new_sp_type = st.selectbox(
                         "Special packaging type",
-                        ["Tray", "Blister", "Box", "Pallet Cover", "Other"],
-                        index=["Tray", "Blister", "Box", "Pallet Cover", "Other"].index(pkg["sp_type"])
+                        sp_type_options,
+                        index=spt_idx,
+                        key=f"new_sp_type_{i}"
                     )
                     new_fill_qty_tray = st.number_input(
                         "Filling Qty (pcs/tray)",
-                        value=pkg["fill_qty_tray"], min_value=0, step=1
+                        value=pkg["fill_qty_tray"], min_value=0, step=1,
+                        key=f"new_fill_qty_tray_{i}"
                     )
                     new_tooling_cost = st.number_input(
                         "Tooling cost (€)",
-                        value=pkg["tooling_cost"], min_value=0.0, step=0.01, format="%.2f"
+                        value=pkg["tooling_cost"], min_value=0.0, step=0.01, format="%.2f",
+                        key=f"new_tooling_cost_{i}"
                     )
                 with col2:
+                    add_sp_pack_options = ["Yes", "No"]
+                    try:
+                        asp_idx = add_sp_pack_options.index(pkg["add_sp_pack"])
+                    except ValueError:
+                        asp_idx = 0
                     new_add_sp_pack = st.selectbox(
                         "Additional packaging needed (pallet, cover)?",
-                        ["Yes", "No"],
-                        index=["Yes", "No"].index(pkg["add_sp_pack"])
+                        add_sp_pack_options,
+                        index=asp_idx,
+                        key=f"new_add_sp_pack_{i}"
                     )
                     new_trays_per_sp_pal = st.number_input(
                         "No. of Trays per SP‐pallet",
-                        value=pkg["trays_per_sp_pal"], min_value=0, step=1
+                        value=pkg["trays_per_sp_pal"], min_value=0, step=1,
+                        key=f"new_trays_per_sp_pal_{i}"
                     )
                     new_sp_pallets_per_lu = st.number_input(
                         "No. of SP‐pallets per LU",
-                        value=pkg["sp_pallets_per_lu"], min_value=0, step=1
+                        value=pkg["sp_pallets_per_lu"], min_value=0, step=1,
+                        key=f"new_sp_pallets_per_lu_{i}"
                     )
 
                 st.markdown("---")
@@ -284,16 +357,17 @@ def main():
                 st.markdown("**6.4 ‒ Total Packaging Loop (Quantity of LUs)**")
                 cols = st.columns(4)
                 new_loop_data = {}
-                for idx, field in enumerate(loop_fields):
-                    new_loop_data[field] = cols[idx % 4].number_input(
+                for idx_field, field in enumerate(loop_fields):
+                    new_loop_data[field] = cols[idx_field % 4].number_input(
                         field.title(),
-                        value=pkg["loop_data"][field],
-                        min_value=0, step=1
+                        value=pkg["loop_data"].get(field, 0),
+                        min_value=0, step=1,
+                        key=f"new_loop_{i}_{idx_field}"
                     )
 
                 # Action buttons
-                col1, col2 = st.columns(2)
-                with col1:
+                col_upd, col_cancel = st.columns(2)
+                with col_upd:
                     if st.form_submit_button("Update Packaging", type="primary"):
                         updated_pkg = {
                             "pack_maint": new_pack_maint,
@@ -301,7 +375,7 @@ def main():
                             "box_type": new_box_type,
                             "fill_qty_box": new_fill_qty_box,
                             "pallet_type": new_pallet_type,
-                            "fill_qty_lu": new_fill_qty_lu,
+                            "fill_qty_lu_oversea": new_fill_qty_lu_oversea,
                             "add_pack_price": new_add_pack_price,
                             "sp_needed": new_sp_needed,
                             "sp_type": new_sp_type,
@@ -316,14 +390,14 @@ def main():
                         if res["is_valid"]:
                             dm.update_packaging(i, updated_pkg)
                             st.success("Packaging record updated")
-                            st.session_state[f"edit_pkg_{i}"] = False
+                            exit_edit_pkg(i)
                             st.rerun()
                         else:
                             for e in res["errors"]:
                                 st.error(e)
-                with col2:
+                with col_cancel:
                     if st.form_submit_button("Cancel"):
-                        st.session_state[f"edit_pkg_{i}"] = False
+                        exit_edit_pkg(i)
                         st.rerun()
 
 if __name__ == "__main__":

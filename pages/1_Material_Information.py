@@ -66,11 +66,11 @@ def main():
             )
 
         with col2:
-            lifetime_years = st.number_input(
-                "Lifetime (years)",
+            lifetime_volume = st.number_input(
+                "Lifetime (volume)",
                 min_value=0.0,
                 step=0.1,
-                help="Expected lifetime of the material (in years)"
+                help="Expected lifetime of the material"
             )
 
             peak_year = st.text_input(
@@ -97,6 +97,13 @@ def main():
                 help="Start of Production (date or code)"
             )
 
+            Pcs_Price = st.number_input(
+                "Pcs_Price",
+                min_value=0.0,
+                step=0.01,
+                help="Material Price / Piece"
+            )
+
         submitted = st.form_submit_button("Add Material", type="primary")
         
         if submitted:
@@ -109,11 +116,12 @@ def main():
                 'usage': usage,
                 'daily_demand': daily_demand,
                 'annual_volume': annual_volume,
-                'lifetime_years': lifetime_years,
+                'lifetime_volume': lifetime_volume,
                 'peak_year': peak_year,
                 'peak_year_volume': peak_year_volume,
                 'working_days': working_days,
                 'sop': sop,
+                'Pcs_Price': Pcs_Price
             }
             
             validation_result = validator.validate_material(material_data)
@@ -144,14 +152,14 @@ def main():
                     st.write(f"**Project Name:** {material.get('project_name', 'N/A')}")
                     st.write(f"**Weight per pcs:** {material.get('weight_per_pcs', 0):.3f} kg")
                     st.write(f"**Annual volume:** {material.get('annual_volume', 0):,} pcs")
-                    st.write(f"**Lifetime (years):** {material.get('lifetime_years', 'N/A')}")
+                    st.write(f"**Lifetime (years):** {material.get('lifetime_volume', 'N/A')}")
                     st.write(f"**Peak year:** {material.get('peak_year', 'N/A')}")
                     st.write(f"**Peak year volume:** {material.get('peak_year_volume', 'N/A')}")
                     st.write(f"**Working Days/year:** {material.get('working_days', 'N/A')}")
                     st.write(f"**SOP:** {material.get('sop', 'N/A')}")
                     st.write(f"**Usage:** {material.get('usage', 'N/A')}")
                     st.write(f"**Daily demand:** {material.get('daily_demand', 'N/A')} pcs")
-                
+                    st.write(f"**Pcs_Price:** {material.get('Pcs_Price', 'N/A')} €")               
                 with col2:
                     if st.button("Edit", key=f"edit_{i}"):
                         st.session_state[f'edit_material_{i}'] = True
@@ -205,9 +213,9 @@ def main():
                         )
                     
                     with col2:
-                        new_lifetime_years = st.number_input(
-                            "Lifetime (years)",
-                            value=material.get('lifetime_years', 0.0),
+                        new_lifetime_volume = st.number_input(
+                            "Lifetime (volume)",
+                            value=material.get('lifetime_volume', 0.0),
                             min_value=0.0,
                             step=0.1
                         )
@@ -231,7 +239,14 @@ def main():
                             "SOP",
                             value=material.get('sop', '')
                         )
-                    
+
+                        new_Pcs_Price = st.number_input(
+                            "Pcs_Price",
+                            value=material.get('Pcs_Price', 0.0),
+                            min_value=0.0,
+                            step=0.01
+                        )
+
                     col1, col2 = st.columns(2)
                     with col1:
                         if st.form_submit_button("Update Material", type="primary"):
@@ -243,11 +258,12 @@ def main():
                                 'usage': new_usage,
                                 'daily_demand': new_daily_demand,
                                 'annual_volume': new_annual_volume,
-                                'lifetime_years': new_lifetime_years,
+                                'lifetime_volume': new_lifetime_volume,
                                 'peak_year': new_peak_year,
                                 'peak_year_volume': new_peak_year_volume,
                                 'working_days': new_working_days,
-                                'sop': new_sop
+                                'sop': new_sop,
+                                'Pcs_Price': new_Pcs_Price
                             }
                             
                             validation_result = validator.validate_material(updated_material)

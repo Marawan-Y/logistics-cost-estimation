@@ -110,8 +110,8 @@ class MaterialValidator(BaseValidator):
         if daily_demand is not None and not self.is_positive_number(daily_demand, allow_zero=True):
             errors.append("Daily demand must be a non-negative number")
         
-        lifetime_years = material_data.get('lifetime_years')
-        if lifetime_years is not None and not self.is_positive_number(lifetime_years, allow_zero=True):
+        lifetime_volume = material_data.get('lifetime_volume')
+        if lifetime_volume is not None and not self.is_positive_number(lifetime_volume, allow_zero=True):
             errors.append("Lifetime must be a non-negative number")
         
         peak_year = material_data.get('peak_year', '').strip()
@@ -132,14 +132,10 @@ class MaterialValidator(BaseValidator):
         sop = material_data.get('sop', '').strip()
         if sop and len(sop) > 50:
             errors.append("SOP must be 50 characters or less")
-        
-        # Add material_value for calculations (not in form but needed)
-        material_value = material_data.get('material_value')
-        if material_value is not None:
-            if not self.is_positive_number(material_value, allow_zero=True):
-                errors.append("Material Value must be a non-negative number")
-            elif material_value > 1000000:
-                errors.append("Material Value seems unreasonably high (max €1,000,000 per piece)")
+
+        Pcs_Price = material_data.get('Pcs_Price')
+        if Pcs_Price is not None and not self.is_positive_number(Pcs_Price, allow_zero=True):
+            errors.append("Pcs_Price must be a non-negative number")        
         
         return {
             'is_valid': len(errors) == 0,
@@ -342,9 +338,9 @@ class PackagingValidator(BaseValidator):
         if self.is_empty_or_none(pallet_type):
             errors.append("LU Type (pallet) is required")
         
-        fill_qty_lu = packaging_data.get('fill_qty_lu')
-        if fill_qty_lu is not None and not self.is_positive_integer(fill_qty_lu, allow_zero=True):
-            errors.append("Filling quantity per LU must be a non-negative integer")
+        fill_qty_lu_oversea = packaging_data.get('fill_qty_lu_oversea')
+        if fill_qty_lu_oversea is not None and not self.is_positive_integer(fill_qty_lu_oversea, allow_zero=True):
+            errors.append("Filling quantity per LU (overseas) must be a non-negative integer")
         
         add_pack_price = packaging_data.get('add_pack_price')
         if add_pack_price is not None and not self.is_positive_number(add_pack_price, allow_zero=True):
@@ -392,35 +388,68 @@ class PackagingValidator(BaseValidator):
                 if qty is not None and not self.is_positive_integer(qty, allow_zero=True):
                     errors.append(f"Loop quantity for {stage} must be a non-negative integer")
         
-        # Note: material_id and supplier_id are added by the form when used with transport
-        
         return {
             'is_valid': len(errors) == 0,
             'errors': errors
         }
 
-
 class RepackingValidator(BaseValidator):
-    """Validator for repacking configuration - matching 7_Repacking_Cost.py"""
-    
+    """Validator for repacking configuration - matching updated 7_Repacking_Cost.py"""
+
     def validate_repacking(self, repacking_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Validate repacking data and return validation result.
+        Validate repacking data with fields:
+          - pcs_weight
+          - packaging_one_way
+          - packaging_returnable
+        Return validation result.
         """
         errors = []
-        
-        rep_cost_hr = repacking_data.get('rep_cost_hr')
-        if rep_cost_hr is not None and not self.is_positive_number(rep_cost_hr, allow_zero=True):
-            errors.append("Repacking cost per hour must be a non-negative number")
-        
-        goods_type = repacking_data.get('goods_type', '').strip()
-        if self.is_empty_or_none(goods_type):
-            errors.append("Type of goods is required")
-        
-        rep_cost_lu = repacking_data.get('rep_cost_lu')
-        if rep_cost_lu is not None and not self.is_positive_number(rep_cost_lu, allow_zero=True):
-            errors.append("Repacking cost per LU must be a non-negative number")
-        
+
+        # Allowed options must match those in the Streamlit page:
+        weight_options = [
+            "None",
+            "light\n(up to 0,050kg)",
+            "moderate\n(up to 0,150kg)",
+            "heavy\n(from 0,150kg)"
+        ]
+        packaging_one_way_options = [
+            "N/A",
+            "one-way tray in cardboard/wooden box",
+            "Bulk (poss. in bag) in cardboard/wooden box",
+            "Einwegblister im Karton/Holzkiste"
+        ]
+        packaging_returnable_options = [
+            "N/A",
+            "returnable trays",
+            "one-way tray in KLT",
+            "KLT"
+        ]
+
+        # pcs_weight
+        pcs_weight = repacking_data.get('pcs_weight')
+        if not pcs_weight or pcs_weight not in weight_options:
+            errors.append(
+                "Weight (pcs_weight) is required and must be one of: "
+                + ", ".join(weight_options)
+            )
+
+        # packaging_one_way
+        packaging_one_way = repacking_data.get('packaging_one_way')
+        if not packaging_one_way or packaging_one_way not in packaging_one_way_options:
+            errors.append(
+                "Packaging one-way (supplier) is required and must be one of: "
+                + ", ".join(packaging_one_way_options)
+            )
+
+        # packaging_returnable
+        packaging_returnable = repacking_data.get('packaging_returnable')
+        if not packaging_returnable or packaging_returnable not in packaging_returnable_options:
+            errors.append(
+                "Packaging returnable (KB) is required and must be one of: "
+                + ", ".join(packaging_returnable_options)
+            )
+
         return {
             'is_valid': len(errors) == 0,
             'errors': errors
@@ -467,7 +496,7 @@ class CustomsValidator(BaseValidator):
 
 
 class TransportValidator(BaseValidator):
-    """Validator for transport configuration - matching 4_Transport_Cost.py and 9_Transport_Cost.py"""
+    """Validator for transport configuration - matching 9_Transport_Cost.py"""
     
     def validate_transport(self, transport_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -475,110 +504,30 @@ class TransportValidator(BaseValidator):
         """
         errors = []
         
-        # Check if this is from 4_Transport_Cost.py (has material_id/supplier_id)
-        # or from 9_Transport_Cost.py (has mode1/mode2)
-        is_material_transport = 'material_id' in transport_data
+        # Validation for 9_Transport_Cost.py
+        mode1 = transport_data.get('mode1', '').strip()
+        if self.is_empty_or_none(mode1):
+            errors.append("Transportation Mode I is required")
         
-        if is_material_transport:
-            # Validation for 4_Transport_Cost.py
-            material_id = transport_data.get('material_id', '').strip()
-            if self.is_empty_or_none(material_id):
-                errors.append("Material is required")
-            
-            supplier_id = transport_data.get('supplier_id', '').strip()
-            if self.is_empty_or_none(supplier_id):
-                errors.append("Supplier is required")
-            
-            transport_mode = transport_data.get('transport_mode', '').strip()
-            if self.is_empty_or_none(transport_mode):
-                errors.append("Transport Mode is required")
-            
-            load_unit_type = transport_data.get('load_unit_type', '').strip()
-            if self.is_empty_or_none(load_unit_type):
-                errors.append("Load Unit Type is required")
-            
-            distance_km = transport_data.get('distance_km')
-            if distance_km is None:
-                errors.append("Distance is required")
-            elif not self.is_positive_number(distance_km, allow_zero=True):
-                errors.append("Distance must be a non-negative number")
-            elif distance_km > 50000:
-                errors.append("Distance seems unreasonably high (max 50,000 km)")
-            
-            transport_cost_per_lu = transport_data.get('transport_cost_per_lu')
-            if transport_cost_per_lu is None:
-                errors.append("Transport Cost per Load Unit is required")
-            elif not self.is_positive_number(transport_cost_per_lu, allow_zero=True):
-                errors.append("Transport Cost per Load Unit must be a non-negative number")
-            
-            lu_capacity = transport_data.get('lu_capacity')
-            if lu_capacity is None:
-                errors.append("Load Unit Capacity is required")
-            elif not self.is_positive_integer(lu_capacity):
-                errors.append("Load Unit Capacity must be a positive integer")
-            
-            # Optional fields for 4_Transport_Cost.py
-            transit_time_days = transport_data.get('transit_time_days')
-            if transit_time_days is not None and not self.is_positive_number(transit_time_days, allow_zero=True):
-                errors.append("Transit Time must be a non-negative number")
-            
-            co2_emission_factor = transport_data.get('co2_emission_factor')
-            if co2_emission_factor is not None and not self.is_positive_number(co2_emission_factor, allow_zero=True):
-                errors.append("CO₂ Emission Factor must be a non-negative number")
-            
-            co2_cost_per_ton = transport_data.get('co2_cost_per_ton')
-            if co2_cost_per_ton is not None and not self.is_positive_number(co2_cost_per_ton, allow_zero=True):
-                errors.append("CO₂ Cost per Ton must be a non-negative number")
-            
-            fuel_surcharge_rate = transport_data.get('fuel_surcharge_rate')
-            if fuel_surcharge_rate is not None and not self.is_valid_percentage(fuel_surcharge_rate):
-                errors.append("Fuel Surcharge Rate must be between 0 and 100 percent")
-            
-            customs_handling = transport_data.get('customs_handling')
-            if customs_handling is not None and not self.is_positive_number(customs_handling, allow_zero=True):
-                errors.append("Customs Handling Cost must be a non-negative number")
-            
-            insurance_rate = transport_data.get('insurance_rate')
-            if insurance_rate is not None and not self.is_valid_percentage(insurance_rate):
-                errors.append("Insurance Rate must be between 0 and 100 percent")
-            
-            handling_cost = transport_data.get('handling_cost')
-            if handling_cost is not None and not self.is_positive_number(handling_cost, allow_zero=True):
-                errors.append("Handling Cost must be a non-negative number")
-            
-            frequency_per_week = transport_data.get('frequency_per_week')
-            if frequency_per_week is not None and not self.is_positive_number(frequency_per_week):
-                errors.append("Frequency must be a positive number")
-            
-            min_shipment_size = transport_data.get('min_shipment_size')
-            if min_shipment_size is not None and not self.is_positive_integer(min_shipment_size):
-                errors.append("Minimum Shipment Size must be a positive integer")
-            
-        else:
-            # Validation for 9_Transport_Cost.py
-            mode1 = transport_data.get('mode1', '').strip()
-            if self.is_empty_or_none(mode1):
-                errors.append("Transportation Mode I is required")
-            
-            mode2 = transport_data.get('mode2', '').strip()
-            if self.is_empty_or_none(mode2):
-                errors.append("Transportation Mode II is required")
-            
-            cost_lu = transport_data.get('cost_lu')
-            if cost_lu is None:
-                errors.append("Transportation Cost per LU is required")
-            elif not self.is_positive_number(cost_lu, allow_zero=True):
-                errors.append("Transportation Cost per LU must be a non-negative number")
-            
-            cost_bonded = transport_data.get('cost_bonded')
-            if cost_bonded is None:
-                errors.append("Transportation Cost (Bonded Warehouse) per LU is required")
-            elif not self.is_positive_number(cost_bonded, allow_zero=True):
-                errors.append("Transportation Cost (Bonded) per LU must be a non-negative number")
-            
-            stack_factor = transport_data.get('stack_factor', '').strip()
-            if self.is_empty_or_none(stack_factor):
-                errors.append("Stackability Factor is required")
+        mode2 = transport_data.get('mode2', '').strip()
+        if self.is_empty_or_none(mode2):
+            errors.append("Transportation Mode II is required")
+        
+        cost_lu = transport_data.get('cost_lu')
+        if cost_lu is None:
+            errors.append("Transportation Cost per LU is required")
+        elif not self.is_positive_number(cost_lu, allow_zero=True):
+            errors.append("Transportation Cost per LU must be a non-negative number")
+        
+        cost_bonded = transport_data.get('cost_bonded')
+        if cost_bonded is None:
+            errors.append("Transportation Cost (Bonded Warehouse) per LU is required")
+        elif not self.is_positive_number(cost_bonded, allow_zero=True):
+            errors.append("Transportation Cost (Bonded) per LU must be a non-negative number")
+        
+        stack_factor = transport_data.get('stack_factor', '').strip()
+        if self.is_empty_or_none(stack_factor):
+            errors.append("Stackability Factor is required")
         
         return {
             'is_valid': len(errors) == 0,
@@ -602,6 +551,12 @@ class CO2Validator(BaseValidator):
             errors.append("CO₂ Cost per Ton must be a non-negative number")
         elif cost_per_ton > 1000:
             errors.append("CO₂ Cost per Ton seems unreasonably high (max €1,000/ton)")
+        
+        co2_conversion_factor = co2_data.get('co2_conversion_factor', '').strip()
+        if self.is_empty_or_none(co2_conversion_factor):
+            errors.append("CO₂ Conversion Factor is required")
+        elif co2_conversion_factor not in ["2.65", "3.17", "3.31"]:
+            errors.append("CO₂ Conversion Factor must be one of: 2.65, 3.17, 3.31")
         
         return {
             'is_valid': len(errors) == 0,
@@ -688,18 +643,17 @@ class CalculationValidator(BaseValidator):
     """Validator for calculation parameters and results."""
     
     def validate_calculation_inputs(self, materials: List[Dict], suppliers: List[Dict], 
-                                  transport_configs: List[Dict], warehouse_configs: List[Dict],
-                                  packaging_configs: List[Dict] = None) -> Dict[str, Any]:
+                                  packaging_configs: List[Dict], transport_configs: List[Dict],
+                                  warehouse_configs: List[Dict], co2_configs: List[Dict],
+                                  operations_configs: List[Dict] = None,
+                                  location_configs: List[Dict] = None,
+                                  repacking_configs: List[Dict] = None,
+                                  customs_configs: List[Dict] = None,
+                                  interest_configs: List[Dict] = None,
+                                  additional_costs: List[Dict] = None):
         """
         Validate that all required data is present for calculations.
         
-        Args:
-            materials: List of material configurations
-            suppliers: List of supplier configurations
-            transport_configs: List of transport configurations  
-            warehouse_configs: List of warehouse configurations
-            packaging_configs: List of packaging configurations (optional)
-            
         Returns:
             Dictionary with 'is_valid' boolean, 'errors' list, and 'warnings' list
         """
@@ -713,69 +667,51 @@ class CalculationValidator(BaseValidator):
         if not suppliers:
             errors.append("No suppliers configured - at least one supplier is required")
         
+        if not packaging_configs:
+            errors.append("No packaging configurations - at least one packaging configuration is required")
+        
         if not transport_configs:
             errors.append("No transport configurations - at least one transport configuration is required")
         
         if not warehouse_configs:
             errors.append("No warehouse configurations - at least one warehouse configuration is required")
         
-        # If basic data exists, check for complete configurations
-        if materials and suppliers and transport_configs:
+        if not co2_configs:
+            errors.append("No CO₂ configurations - at least one CO₂ configuration is required")
+        
+        # Check optional configurations and provide warnings
+        if not operations_configs:
+            warnings.append("No operations configurations found - default values will be used")
+        
+        if not location_configs:
+            warnings.append("No location configurations found - distance calculations may be affected")
+        
+        if not repacking_configs:
+            warnings.append("No repacking configurations found - repacking costs will be zero")
+        
+        if not customs_configs:
+            warnings.append("No customs configurations found - customs costs will be zero")
+        
+        if not interest_configs:
+            warnings.append("No interest configurations found - inventory carrying costs may be incomplete")
+        
+        if not additional_costs:
+            warnings.append("No additional costs configured")
+        
+        # Check for complete material-supplier pairs
+        if materials and suppliers:
             complete_configs = 0
-            incomplete_pairs = []
-            
-            # Check transport configurations (from 4_Transport_Cost.py)
-            for transport in transport_configs:
-                # Skip if this is from 9_Transport_Cost.py (has mode1/mode2 instead)
-                if 'mode1' in transport:
-                    continue
+            for material in materials:
+                for supplier in suppliers:
+                    # A complete config needs at least material, supplier, packaging, transport, warehouse
+                    material_id = material.get('material_no')
+                    supplier_id = supplier.get('vendor_id')
                     
-                material_id = transport.get('material_id')
-                supplier_id = transport.get('supplier_id')
-                
-                material_exists = any(m['material_no'] == material_id for m in materials)
-                supplier_exists = any(s['vendor_id'] == supplier_id for s in suppliers)
-                
-                if material_exists and supplier_exists:
+                    # Since configs are now simpler (not tied to specific pairs), just count pairs
                     complete_configs += 1
-                else:
-                    missing = []
-                    if not material_exists:
-                        missing.append(f"material {material_id}")
-                    if not supplier_exists:
-                        missing.append(f"supplier {supplier_id}")
-                    
-                    incomplete_pairs.append(f"Transport config missing: {', '.join(missing)}")
             
             if complete_configs == 0:
-                errors.append("No complete transport configurations found")
-                if incomplete_pairs:
-                    errors.extend(incomplete_pairs[:5])
-                    if len(incomplete_pairs) > 5:
-                        errors.append(f"... and {len(incomplete_pairs) - 5} more incomplete configurations")
-            else:
-                if incomplete_pairs:
-                    warnings.append(f"Found {complete_configs} complete transport configurations")
-                    warnings.append(f"{len(incomplete_pairs)} incomplete configurations will be skipped")
-        
-        # Check for material value in materials (needed for some calculations)
-        if materials:
-            materials_without_value = []
-            for m in materials:
-                if not m.get('material_value'):
-                    # Check if there's a price/value field we might have missed
-                    if not any(key in m for key in ['material_value', 'price', 'value', 'cost']):
-                        materials_without_value.append(m['material_no'])
-            
-            if materials_without_value:
-                warnings.append(f"Materials without value: {', '.join(materials_without_value[:5])}")
-                if len(materials_without_value) > 5:
-                    warnings.append(f"... and {len(materials_without_value) - 5} more")
-                warnings.append("Some cost calculations (customs, insurance) may be incomplete without material values")
-        
-        # Check if packaging configurations exist (optional but recommended)
-        if not packaging_configs:
-            warnings.append("No packaging configurations found - default packaging costs will be used")
+                errors.append("No valid material-supplier combinations found")
         
         return {
             'is_valid': len(errors) == 0,

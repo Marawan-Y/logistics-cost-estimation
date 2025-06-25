@@ -97,7 +97,11 @@ class DataManager:
                 if m['material_no'] != material_no
             ]
             
-            # Remove associated transport configs
+            # Remove associated configs
+            st.session_state.packaging = [
+                p for p in st.session_state.packaging 
+                if p.get('material_id') != material_no
+            ]
             st.session_state.transport = [
                 t for t in st.session_state.transport 
                 if t.get('material_id') != material_no
@@ -156,7 +160,11 @@ class DataManager:
                 if s['vendor_id'] != vendor_id
             ]
             
-            # Remove associated transport configs
+            # Remove associated configs
+            st.session_state.packaging = [
+                p for p in st.session_state.packaging 
+                if p.get('supplier_id') != vendor_id
+            ]
             st.session_state.transport = [
                 t for t in st.session_state.transport 
                 if t.get('supplier_id') != vendor_id
@@ -365,37 +373,46 @@ class DataManager:
         except Exception:
             return False
     
-    # Transport management (updated for new structure)
+    # Transport management
     def add_transport(self, transport_data: Dict[str, Any]) -> bool:
-        """Add new transport configuration."""
-        import streamlit as st
-        try:
+         """Add new transport configuration."""
+         import streamlit as st
+         try:
             st.session_state.transport.append(transport_data)
             return True
-        except Exception:
+         except Exception:
             return False
-    
+
     def get_transport(self) -> List[Dict[str, Any]]:
         """Get all transport configurations."""
         import streamlit as st
         return st.session_state.transport
-    
-    def transport_exists(self, material_id: str, supplier_id: str) -> bool:
-        """Check if transport configuration exists for material-supplier pair."""
+
+    def transport_exists(self, key: str) -> bool:
+        """Check if transport configuration exists by its unique key."""
         import streamlit as st
-        return any(
-            t.get('material_id') == material_id and t.get('supplier_id') == supplier_id 
-            for t in st.session_state.transport
-        )
-    
-    def remove_transport(self, material_id: str, supplier_id: str) -> bool:
-        """Remove transport configuration for material-supplier pair."""
+        return any(t.get('key') == key for t in st.session_state.transport)
+
+    def update_transport(self, old_key: str, updated_data: Dict[str, Any]) -> bool:
+        """Update an existing transport configuration identified by old_key."""
+        import streamlit as st
+        try:
+            for i, t in enumerate(st.session_state.transport):
+                  if t.get('key') == old_key:
+                     st.session_state.transport[i] = updated_data
+                     return True
+            return False
+        except Exception:
+            return False
+
+    def remove_transport(self, key: str) -> bool:
+        """Remove transport configuration by its unique key."""
         import streamlit as st
         try:
             st.session_state.transport = [
-                t for t in st.session_state.transport 
-                if not (t.get('material_id') == material_id and t.get('supplier_id') == supplier_id)
-            ]
+            t for t in st.session_state.transport 
+            if t.get('key') != key
+        ]
             return True
         except Exception:
             return False
@@ -588,24 +605,34 @@ class DataManager:
         if not (materials and suppliers):
             return False
         
-        # Need at least one transport configuration
+        # Need at least basic configurations
+        packaging_configs = st.session_state.packaging
         transport_configs = st.session_state.transport
-        if not transport_configs:
+        warehouse_configs = st.session_state.warehouse
+        co2_configs = st.session_state.co2
+        
+        # Check if minimum required configs exist
+        if not (packaging_configs and transport_configs and warehouse_configs and co2_configs):
             return False
         
-        # Check if at least one complete configuration exists
-        for transport in transport_configs:
-            material_id = transport.get('material_id')
-            supplier_id = transport.get('supplier_id')
-            
-            # Verify material and supplier exist
-            material_exists = any(m['material_no'] == material_id for m in materials)
-            supplier_exists = any(s['vendor_id'] == supplier_id for s in suppliers)
-            
-            if material_exists and supplier_exists:
-                return True
+        return True
+    
+    def get_material_supplier_pairs(self) -> List[Dict[str, Any]]:
+        """Get all possible material-supplier pairs with their configurations."""
+        import streamlit as st
+        pairs = []
         
-        return False
+        for material in st.session_state.materials:
+            for supplier in st.session_state.suppliers:
+                pair = {
+                    'material': material,
+                    'supplier': supplier,
+                    'pair_id': f"{material['material_no']}_{supplier['vendor_id']}",
+                    'display_name': f"{material['material_no']} - {material['material_desc']} | {supplier['vendor_id']} - {supplier['vendor_name']}"
+                }
+                pairs.append(pair)
+        
+        return pairs
     
     def clear_all_data(self) -> bool:
         """Clear all stored data."""
@@ -696,18 +723,4 @@ class DataManager:
             'calculation_ready': self.is_calculation_ready()
         }
         
-        # Calculate complete configurations
-        complete_configs = 0
-        if st.session_state.transport:
-            for transport in st.session_state.transport:
-                material_id = transport.get('material_id')
-                supplier_id = transport.get('supplier_id')
-                
-                material_exists = any(m['material_no'] == material_id for m in st.session_state.materials)
-                supplier_exists = any(s['vendor_id'] == supplier_id for s in st.session_state.suppliers)
-                
-                if material_exists and supplier_exists:
-                    complete_configs += 1
-        
-        stats['complete_configurations'] = complete_configs
         return stats
