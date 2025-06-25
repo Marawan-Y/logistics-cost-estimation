@@ -15,14 +15,13 @@ def main():
     data_manager = st.session_state.data_manager
     validator = OperationsValidator()
 
-    incoterm_options = ["EXW", "FOB", "FCA", "DAP", "DDP"]  # sample list
-    classification_options = ["A", "B", "C"]
-    calloff_options = ["KANBAN", "EDI", "Manual"]
-    directive_options = ["Y031010 - v1", "Y031010 - v2"]
+    incoterm_options = ["EXW", "FCA", "FAS", "FOB", "CFR", "CIF", "CPT", "CIP", "DAP", "DPU", "DDP"]  # sample list
+    classification_options = ["A-Part", "B-Part", "C-Part"]
+    calloff_options = ["Supply Web", "EDI", "Mail", "other"]
     yes_no = ["Yes", "No"]
-    ownership_options = ["Supplier", "KB/Bendix", "Shared"]
-    responsible_opts = ["Supplier", "KB/Bendix"]
-    currency_opts = ["EUR", "USD", "CNY"]
+    ownership_options = ["Supplier", "KB", "Customer"]
+    responsible_opts = ["Supplier", "CoC"]
+    currency_opts = ["EUR", "USD", "RMB", "YEN", "GBP"]
 
     # ---------- Add ----------
     with st.form("operations_form"):
@@ -35,7 +34,7 @@ def main():
             part_class = st.selectbox("Part Classification *", classification_options)
             calloff_type = st.selectbox("Call-off Transfer Type *", calloff_options)
             directive = st.selectbox(
-                "Latest Version (Y031010) of Logistics Directive *", directive_options
+                "Latest Version (Y031010) of Logistics Directive *", yes_no
             )
             lead_time = st.number_input("Lead Time (days) *", min_value=0, step=1)
         with col2:

@@ -16,7 +16,8 @@ def main():
     dm = st.session_state.data_manager
     val = TransportValidator()
 
-    transport_modes = ["Road", "Rail", "Sea", "Air"]
+    transport_modes = ["Road", "Rail", "Sea"]
+    stack_factors = ["1", "1.2", "1.25", "1.333333333", "1.166666667", "1.5", "2"]
 
     # ---------- Add New Transport Cost ----------
     with st.form("transport_form"):
@@ -49,7 +50,7 @@ def main():
             )
             stack_factor = st.selectbox(
                 "Stackability Factor *",
-                ["1×", "1.5×", "2×", "3×"],
+                stack_factors,
                 help="Factor by which items can be stacked"
             )
 
@@ -83,6 +84,13 @@ def main():
     transport_list = dm.get_transport()
     if not transport_list:
         st.info("No transport costs configured yet.")
+
+    # Initialize edit flags if not present
+    for i, _ in enumerate(transport_list):
+        flag = f"is_editing_tr_{i}"
+        if flag not in st.session_state:
+            st.session_state[flag] = False
+
     for i, tr in enumerate(transport_list):
         with st.expander(f"{tr['mode1']} / {tr['mode2']}"):
             col1, col2, col3 = st.columns([3, 1, 1])
@@ -91,18 +99,19 @@ def main():
                 st.write(f"**Cost (Bonded) per LU:** €{tr['cost_bonded']:.2f}")
                 st.write(f"**Stackability Factor:** {tr['stack_factor']}")
             with col2:
-                if st.button("Edit", key=f"edit_tr_{i}"):
-                    st.session_state[f"edit_tr_{i}"] = True
+                if st.button("Edit", key=f"edit_btn_{i}"):
+                    st.session_state[f"is_editing_tr_{i}"] = True
                     st.rerun()
             with col3:
-                if st.button("Delete", key=f"del_tr_{i}", type="secondary"):
+                if st.button("Delete", key=f"del_btn_{i}", type="secondary"):
                     dm.remove_transport(tr["key"])
                     st.success("Transport cost deleted.")
                     st.rerun()
 
     # ---------- Edit Transport Cost ----------
     for i, tr in enumerate(transport_list):
-        if st.session_state.get(f"edit_tr_{i}", False):
+        if st.session_state.get(f"is_editing_tr_{i}", False):
+            # Show edit form
             with st.form(f"edit_tr_form_{i}"):
                 st.subheader(f"Edit Transport Cost: {tr['mode1']} / {tr['mode2']}")
                 col1, col2 = st.columns(2)
@@ -132,10 +141,15 @@ def main():
                         step=0.01,
                         format="%.2f"
                     )
+                    # Use same stack_factors list as in Add
+                    # Pre-select index based on current value
+                    sf_index = 0
+                    if tr.get("stack_factor") in stack_factors:
+                        sf_index = stack_factors.index(tr["stack_factor"])
                     new_stack_factor = st.selectbox(
                         "Stackability Factor",
-                        ["1×", "1.5×", "2×", "3×"],
-                        index=["1×", "1.5×", "2×", "3×"].index(tr["stack_factor"])
+                        stack_factors,
+                        index=sf_index
                     )
 
                 col1b, col2b = st.columns(2)
@@ -154,14 +168,14 @@ def main():
                         if res["is_valid"]:
                             dm.update_transport(tr["key"], upd)
                             st.success("Transport cost updated.")
-                            st.session_state[f"edit_tr_{i}"] = False
+                            st.session_state[f"is_editing_tr_{i}"] = False
                             st.rerun()
                         else:
                             for e in res["errors"]:
                                 st.error(e)
                 with col2b:
                     if st.form_submit_button("Cancel"):
-                        st.session_state[f"edit_tr_{i}"] = False
+                        st.session_state[f"is_editing_tr_{i}"] = False
                         st.rerun()
 
 if __name__ == "__main__":

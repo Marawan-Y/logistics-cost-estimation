@@ -1,3 +1,4 @@
+# ------2_Supplier_Information.py-------
 import streamlit as st
 from utils.validators import SupplierValidator
 from utils.data_manager import DataManager
