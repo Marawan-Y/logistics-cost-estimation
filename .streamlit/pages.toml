@@ -1,0 +1,69 @@
+[[pages]]
+path = "app.py"
+name = "Overview"
+icon = "🏠"
+
+[[pages]]
+path = "pages/1_Materials.py"
+name = "Material Information"
+icon = "📦"
+
+[[pages]]
+path = "pages/2_Suppliers.py"
+name = "Supplier Information"
+icon = "🏭"
+
+[[pages]]
+path = "pages/3_Locations.py"
+name = "KB Bendix Location Info"
+icon = "📍"
+
+[[pages]]
+path = "pages/4_Operations.py"
+name = "Operations Information"
+icon = "⚙️"
+
+[[pages]]
+path = "pages/5_Packaging.py"
+name = "Packaging Cost"
+icon = "📦"
+
+[[pages]]
+path = "pages/6_Repacking.py"
+name = "Repacking Cost"
+icon = "🔄"
+
+[[pages]]
+path = "pages/7_Customs.py"
+name = "Customs Cost"
+icon = "🛃"
+
+[[pages]]
+path = "pages/8_Transport.py"
+name = "Transport Cost"
+icon = "🚚"
+
+[[pages]]
+path = "pages/9_CO2.py"
+name = "Annual CO2 Cost"
+icon = "🌱"
+
+[[pages]]
+path = "pages/10_Warehouse.py"
+name = "Warehouse Cost"
+icon = "🏗️"
+
+[[pages]]
+path = "pages/11_Interest.py"
+name = "Inventory Cost"
+icon = "💰"
+
+[[pages]]
+path = "pages/12_Additional_Costs.py"
+name = "Additional Cost"
+icon = "➕"
+
+[[pages]]
+path = "pages/13_Cost_Calculation.py"
+name = "Cost Calculation"
+icon = "🧮"

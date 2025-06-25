@@ -2,10 +2,30 @@
 import streamlit as st
 import pandas as pd
 from utils.data_manager import DataManager
+import base64
+import os
 
 # Initialize data manager in session_state
 if 'data_manager' not in st.session_state:
     st.session_state.data_manager = DataManager()
+
+def load_svg_logo():
+    """Load and return the SVG logo as base64 encoded string"""
+    try:
+        # Try different possible logo file names
+        logo_files = ['logo.svg', 'company_logo.svg', 'Logo.svg']
+        
+        for logo_file in logo_files:
+            if os.path.exists(logo_file):
+                with open(logo_file, "r", encoding="utf-8") as f:
+                    svg_content = f.read()
+                return svg_content
+        
+        # If no logo file found
+        return None
+    except Exception as e:
+        st.error(f"Error loading logo: {str(e)}")
+        return None
 
 def main():
     st.set_page_config(
@@ -15,8 +35,40 @@ def main():
         initial_sidebar_state="expanded"
     )
 
-    st.title("🚚 Logistics Cost Estimation System")
-    st.markdown("Comprehensive logistics cost calculation and analysis platform")
+    # Create centered header with logo above title
+    _, center_col, _ = st.columns([1, 4, 1])
+    
+    with center_col:
+        svg_logo = load_svg_logo()
+        if svg_logo:
+            # Display SVG logo centered above the title
+            st.markdown(
+                f"""
+                <div style="display: flex; justify-content: center; margin-bottom: 20px;">
+                    <div style="width: 80%; max-width: 600px;">
+                        {svg_logo}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        else:
+            # Fallback if no logo found
+            st.info("Add logo.svg to project directory")
+        
+        # Title and subtitle centered below the logo
+        st.markdown(
+            """
+            <h1 style='text-align: center; margin-top: 0;'>
+                 Logistics Cost Estimation
+            </h1>
+            <p style='text-align: center; font-size: 1.2em; color: #666;'>
+                Comprehensive logistics cost calculation and analysis platform
+            </p>
+            """,
+            unsafe_allow_html=True
+        )
+    
     st.markdown("---")
 
     # Sidebar navigation info
@@ -315,7 +367,7 @@ def main():
 
     # Footer
     st.markdown("---")
-    st.caption("Logistics Cost Automation System v1.0 | Built with Streamlit")
+    st.caption("Logistics Cost Automation Software v1.0")
 
 if __name__ == "__main__":
     main()
