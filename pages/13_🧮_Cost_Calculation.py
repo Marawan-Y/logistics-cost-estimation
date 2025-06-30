@@ -1,7 +1,10 @@
+# Add this to the beginning of 13_🧮_Cost_Calculation.py
+
 import streamlit as st
 import pandas as pd
 from utils.calculations import LogisticsCostCalculator
 from utils.data_manager import DataManager
+from utils.excel_exporter import LogisticsExcelExporter  # Add this import
 import json
 
 st.set_page_config(page_title="Cost Calculation", page_icon="💰", layout="wide")
@@ -17,8 +20,10 @@ def main():
 
     data_manager = st.session_state.data_manager
     calculator = LogisticsCostCalculator()
+    excel_exporter = LogisticsExcelExporter()  # Add this line
 
-    # --- Load All Configurations ---
+    # [Keep all the existing code for loading configurations and checking requirements...]
+    # Load All Configurations
     materials = data_manager.get_materials()
     suppliers = data_manager.get_suppliers()
     locations = data_manager.get_locations()
@@ -32,7 +37,7 @@ def main():
     interest_configs = data_manager.get_interest()
     additional_costs = data_manager.get_additional_costs()
 
-    # --- Check Required Data ---
+    # Check Required Data
     missing_configs = []
     if not materials:          missing_configs.append("Materials")
     if not suppliers:          missing_configs.append("Suppliers")
@@ -46,7 +51,8 @@ def main():
         st.info("Please configure all required data before performing calculations.")
         return
 
-    # --- Metrics Overview ---
+    # [Keep all existing calculation logic...]
+    # Metrics Overview
     st.subheader("📊 Configuration Overview")
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -68,7 +74,7 @@ def main():
 
     st.markdown("---")
 
-    # --- Calculation Controls ---
+    # Calculation Controls
     st.subheader("🔧 Calculation Settings")
     col1, col2 = st.columns(2)
     with col1:
@@ -78,11 +84,11 @@ def main():
         )
     with col2:
         export_format = st.selectbox(
-            "Export Format", options=["CSV", "Excel", "JSON"]
+            "Export Format", options=["Formatted Excel", "CSV", "JSON"]
         )
         show_detailed_breakdown = st.checkbox("Show Detailed Breakdown", value=True)
 
-    # --- Select pairs if needed ---
+    # Select pairs if needed
     selected_pairs = []
     if calculation_mode == "Selected Material-Supplier Pairs":
         st.subheader("Select Material-Supplier Pairs")
@@ -95,7 +101,7 @@ def main():
         selected_pair_ids = st.multiselect(
             "Select Material-Supplier Pairs for Calculation",
             options=[pair['pair_id'] for pair in available_pairs],
-            default=[pair['pair_id'] for pair in available_pairs[:5]],  # Default to first 5
+            default=[pair['pair_id'] for pair in available_pairs[:5]],
             format_func=lambda x: next(pair['display_name'] for pair in available_pairs if pair['pair_id'] == x)
         )
         
@@ -105,7 +111,7 @@ def main():
         
         selected_pairs = [pair for pair in available_pairs if pair['pair_id'] in selected_pair_ids]
 
-    # --- Run Calculation ---
+    # Run Calculation
     if st.button("🚀 Calculate Logistics Costs", type="primary"):
         with st.spinner("Calculating logistics costs..."):
             try:
@@ -117,7 +123,7 @@ def main():
                 else:
                     pairs_to_calculate = selected_pairs
                 
-                # Get singleton configs (first one if exists)
+                # Get singleton configs
                 operations_config = operations[0] if operations else None
                 location_config = locations[0] if locations else None
                 repacking_config = repacking_configs[0] if repacking_configs else None
@@ -129,7 +135,6 @@ def main():
                     material = pair['material']
                     supplier = pair['supplier']
                     
-                    # Get configs for this pair (using first available for now)
                     packaging_config = packaging_configs[0] if packaging_configs else None
                     transport_config = transport_configs[0] if transport_configs else None
                     warehouse_config = warehouse_configs[0] if warehouse_configs else None
@@ -161,7 +166,6 @@ def main():
                     st.session_state.calculation_results = results
                     st.success(f"✅ Calculation completed! {len(results)} configurations processed.")
                     
-                    # Show any calculation errors
                     errors = calculator.get_calculation_errors()
                     if errors:
                         with st.expander("⚠️ Calculation Warnings"):
@@ -181,7 +185,7 @@ def main():
                 st.error(traceback.format_exc())
                 return
 
-    # --- Display Results ---
+    # Display Results
     if 'calculation_results' in st.session_state and st.session_state.calculation_results:
         results = st.session_state.calculation_results
         st.markdown("---")
@@ -202,7 +206,7 @@ def main():
             col3.metric("Min Cost/Piece", f"€{min_cost:.3f}")
             col4.metric("Max Cost/Piece", f"€{max_cost:.3f}")
 
-        # --- Results Table ---
+        # Results Table
         st.subheader("Summary Results")
         
         # Create summary dataframe
@@ -225,7 +229,7 @@ def main():
         df_summary = pd.DataFrame(summary_data)
         st.dataframe(df_summary, use_container_width=True)
 
-        # --- Detailed Breakdown ---
+        # Detailed Breakdown (keep existing code...)
         if show_detailed_breakdown:
             st.subheader("Detailed Cost Breakdown")
             
@@ -255,7 +259,7 @@ def main():
                             st.write(f"• Annual Volume: {result.get('Annual Volume', 0):,} pieces")
                             st.write(f"• Total Annual Cost: €{result.get('total_annual_cost', 0):,.0f}")
                             
-                            # Cost distribution pie chart
+                            # Cost distribution
                             total_cost = result.get('total_cost_per_piece', 0)
                             if total_cost > 0:
                                 st.write("**📈 Cost Distribution:**")
@@ -334,12 +338,67 @@ def main():
                                 if value > 0:
                                     st.write(f"• {label}: {value} days")
 
-        # --- Export Functionality ---
+        # Export Functionality
         st.markdown("---")
         st.subheader("📁 Export Results")
         
-        if export_format == "CSV":
-            # Create full results dataframe
+        # Create export options based on selected format
+        if export_format == "Formatted Excel":
+            st.info("📋 **Formatted Excel Export** - Creates a professional report matching the logistics cost calculation template with proper formatting, colors, and structure.")
+            
+            # Allow user to select which result to export (if multiple)
+            if len(results) > 1:
+                result_options = []
+                for i, r in enumerate(results):
+                    material_desc = f"{r.get('material_id', '')} - {r.get('material_desc', '')}"
+                    supplier_desc = f"{r.get('supplier_id', '')} - {r.get('supplier_name', '')}"
+                    result_options.append(f"{material_desc} | {supplier_desc}")
+                
+                selected_result_idx = st.selectbox(
+                    "Select configuration to export:",
+                    range(len(results)),
+                    format_func=lambda x: result_options[x]
+                )
+                selected_result = results[selected_result_idx]
+            else:
+                selected_result = results[0]
+            
+            # Export settings
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                plant_id = st.text_input("Plant ID", value="1051")
+            with col2:
+                version = st.text_input("Version", value="1.5.5")
+            with col3:
+                created_by = st.text_input("Created by", value="System")
+            
+            if st.button("📊 Generate Formatted Excel Report", type="primary"):
+                try:
+                    excel_buffer = excel_exporter.create_logistics_report(
+                        selected_result, 
+                        plant_id=plant_id, 
+                        version=version, 
+                        created_by=created_by
+                    )
+                    
+                    # Create filename
+                    material_id = selected_result.get('material_id', 'Material')
+                    supplier_id = selected_result.get('supplier_id', 'Supplier')
+                    timestamp = pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')
+                    filename = f"Logistics_Cost_Report_{material_id}_{supplier_id}_{timestamp}.xlsx"
+                    
+                    st.download_button(
+                        label="📥 Download Formatted Excel Report",
+                        data=excel_buffer,
+                        file_name=filename,
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+                    st.success("✅ Formatted Excel report generated successfully!")
+                    
+                except Exception as e:
+                    st.error(f"❌ Error generating formatted Excel: {str(e)}")
+        
+        elif export_format == "CSV":
             df_export = pd.DataFrame(results)
             csv_data = df_export.to_csv(index=False)
             st.download_button(
@@ -347,47 +406,6 @@ def main():
                 data=csv_data,
                 file_name=f"logistics_costs_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.csv",
                 mime="text/csv"
-            )
-        
-        elif export_format == "Excel":
-            # Create Excel file with multiple sheets
-            output = pd.ExcelWriter('temp.xlsx', engine='xlsxwriter')
-            
-            # Summary sheet
-            df_summary.to_excel(output, sheet_name='Summary', index=False)
-            
-            # Detailed results sheet
-            df_detailed = pd.DataFrame(results)
-            df_detailed.to_excel(output, sheet_name='Detailed Results', index=False)
-            
-            # Cost breakdown sheet
-            cost_breakdown = []
-            for r in results:
-                cost_breakdown.append({
-                    'Material': f"{r.get('material_id')} - {r.get('material_desc')}",
-                    'Supplier': f"{r.get('supplier_id')} - {r.get('supplier_name')}",
-                    'Packaging Cost': r.get('packaging_cost_per_piece', 0),
-                    'Transport Cost': r.get('transport_cost_per_piece', 0),
-                    'Warehouse Cost': r.get('warehouse_cost_per_piece', 0),
-                    'CO₂ Cost': r.get('co2_cost_per_piece', 0),
-                    'Customs Cost': r.get('customs_cost_per_piece', 0),
-                    'Repacking Cost': r.get('repacking_cost_per_piece', 0),
-                    'Additional Cost': r.get('additional_cost_per_piece', 0),
-                    'Total Cost': r.get('total_cost_per_piece', 0)
-                })
-            df_breakdown = pd.DataFrame(cost_breakdown)
-            df_breakdown.to_excel(output, sheet_name='Cost Breakdown', index=False)
-            
-            output.close()
-            
-            with open('temp.xlsx', 'rb') as f:
-                excel_data = f.read()
-            
-            st.download_button(
-                label="📊 Download Excel Report",
-                data=excel_data,
-                file_name=f"logistics_report_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
         
         elif export_format == "JSON":
@@ -399,12 +417,11 @@ def main():
                 mime="application/json"
             )
 
-        # --- Comparison Analysis ---
+        # Comparison Analysis (keep existing code...)
         if len(results) > 1:
             st.markdown("---")
             st.subheader("📊 Comparison Analysis")
             
-            # Find best and worst configs
             valid_results = [r for r in results if r.get('total_cost_per_piece') is not None]
             if valid_results:
                 best_config = min(valid_results, key=lambda x: x['total_cost_per_piece'])
