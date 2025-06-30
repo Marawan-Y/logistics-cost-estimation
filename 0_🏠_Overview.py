@@ -4,6 +4,7 @@ import pandas as pd
 from utils.data_manager import DataManager
 import base64
 import os
+from datetime import datetime
 
 # Initialize data manager in session_state
 if 'data_manager' not in st.session_state:
@@ -26,6 +27,46 @@ def load_svg_logo():
     except Exception as e:
         st.error(f"Error loading logo: {str(e)}")
         return None
+
+def display_save_status():
+    """Display save status in sidebar"""
+    data_manager = st.session_state.data_manager
+    save_status = data_manager.get_save_status()
+    
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 💾 Data Status")
+    
+    if save_status['file_exists']:
+        last_save = save_status['last_save_time']
+        if last_save:
+            time_str = last_save.strftime("%Y-%m-%d %H:%M:%S")
+            st.sidebar.success(f"📄 Last saved: {time_str}")
+        else:
+            st.sidebar.info("📄 Data file exists")
+        
+        # Show file size
+        file_size_kb = save_status['file_size'] / 1024
+        st.sidebar.caption(f"File size: {file_size_kb:.1f} KB")
+        
+        # Show backup count
+        if save_status['backup_count'] > 0:
+            st.sidebar.caption(f"Backups: {save_status['backup_count']}")
+    else:
+        st.sidebar.warning("⚠️ No saved data found")
+    
+    # Auto-save status
+    if save_status['auto_save_enabled']:
+        st.sidebar.caption("🔄 Auto-save: ON")
+    else:
+        st.sidebar.caption("⏸️ Auto-save: OFF")
+    
+    # Manual save button
+    if st.sidebar.button("💾 Save Now", help="Manually save all data"):
+        if data_manager.manual_save():
+            st.sidebar.success("✅ Data saved!")
+            st.rerun()
+        else:
+            st.sidebar.error("❌ Save failed!")
 
 def main():
     st.set_page_config(
@@ -71,6 +112,9 @@ def main():
     
     st.markdown("---")
 
+    # Display save status in sidebar
+    display_save_status()
+
     # Sidebar navigation info
     st.sidebar.title("📋 Navigation Guide")
     st.sidebar.markdown("""
@@ -94,6 +138,9 @@ def main():
     
     **Analysis:**
     13. **Cost Calculation** - Run calculations & export
+    
+    **Settings:**
+    14. **Settings** - Configure auto-save and data management
     """)
 
     # Main dashboard
@@ -160,7 +207,34 @@ def main():
 
     st.markdown("---")
 
+    # Data Persistence Status
+    save_status = data_manager.get_save_status()
+    st.subheader("💾 Data Persistence Status")
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if save_status['file_exists']:
+            st.success("📄 Data File: Exists")
+            if save_status['last_save_time']:
+                st.caption(f"Last saved: {save_status['last_save_time'].strftime('%H:%M:%S')}")
+        else:
+            st.warning("📄 Data File: Not Found")
+    
+    with col2:
+        auto_save_status = "🔄 Enabled" if save_status['auto_save_enabled'] else "⏸️ Disabled"
+        if save_status['auto_save_enabled']:
+            st.success(f"Auto-save: {auto_save_status}")
+        else:
+            st.warning(f"Auto-save: {auto_save_status}")
+    
+    with col3:
+        backup_count = save_status['backup_count']
+        st.info(f"🗂️ Backups: {backup_count}")
+        if backup_count > 0:
+            st.caption("Automatic backups available")
+
     # Quick Stats
+    st.markdown("---")
     st.subheader("📈 Quick Statistics")
     col1, col2, col3 = st.columns(3)
     
@@ -357,17 +431,38 @@ def main():
         - Each configuration can be edited or deleted after creation
         - Import/Export functionality allows you to save and share configurations
         - The calculation page provides detailed breakdowns and comparisons
+        - **Auto-save**: Your data is automatically saved after each change
+        - **Backups**: Previous versions are kept automatically for safety
         
         ### 📊 Understanding Results:
         - **Cost per Piece**: Individual component costs broken down
         - **Annual Costs**: Projected yearly expenses based on volumes
         - **Comparison Analysis**: Identifies best and worst configurations
         - **Export Options**: Multiple formats for different use cases
+        
+        ### 💾 Data Management:
+        - **Persistent Storage**: Your data survives browser sessions
+        - **Auto-save**: Changes are saved automatically (can be disabled)
+        - **Manual Save**: Force save data using the "Save Now" button
+        - **Backups**: Old versions are kept automatically (last 10)
+        - **Settings**: Configure data persistence options in the Settings page
         """)
 
     # Footer
     st.markdown("---")
-    st.caption("Logistics Cost Automation Software v1.0")
+    col1, col2, col3 = st.columns([2, 1, 1])
+    with col1:
+        st.caption("Logistics Cost Automation Software v1.0 - With Persistent Data Storage")
+    with col2:
+        if save_status['file_exists']:
+            st.caption("💾 Data: Persistent")
+        else:
+            st.caption("⚠️ Data: Session Only")
+    with col3:
+        if save_status['auto_save_enabled']:
+            st.caption("🔄 Auto-save: ON")
+        else:
+            st.caption("⏸️ Auto-save: OFF")
 
 if __name__ == "__main__":
     main()
