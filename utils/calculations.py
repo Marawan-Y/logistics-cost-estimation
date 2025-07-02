@@ -5,6 +5,7 @@ Logistics Cost Calculation Engine
 This module contains the core calculation logic for computing logistics costs
 based on material, supplier, packaging, transport, and warehouse parameters.
 """
+import math
 from .packaging_tables import STANDARD_BOXES, SPECIAL_PACKAGING, ADDITIONAL_PACKAGING, ACCESSORY_PACKAGING
 from .repacking_table import PACKAGING_OPERATION_COSTS
 
@@ -192,8 +193,9 @@ class LogisticsCostCalculator:
             b_price = self.price_per_box(packaging_config)
             pallet_price = self.pallet_price(packaging_config)
 
-            no_box_loop_plant = (daily_demand * loop_plant_days) / fill_qty_box if fill_qty_box > 0 else 0
-            no_lu_loop_plant = no_box_loop_plant / b_per_lu if b_per_lu > 0 else 0
+            no_box_loop_plant = math.ceil(((daily_demand * loop_plant_days) / fill_qty_box if fill_qty_box > 0 else 0) / 10) *10
+
+            no_lu_loop_plant = math.ceil(no_box_loop_plant / b_per_lu if b_per_lu > 0 else 0)
 
             pck_cost_plant = (no_box_loop_plant * (adds + b_price)) + (no_lu_loop_plant * pallet_price)
 
@@ -233,7 +235,8 @@ class LogisticsCostCalculator:
             tooling_cost = packaging_config.get('tooling_cost', 0)
 
             no_box_coc = (daily_demand * subsupplier_days) / fill_box if fill_box > 0 else 0
-            no_lu_coc = no_box_coc / b_per_lu if b_per_lu > 0 else 0
+            actual_no_lu_coc = no_box_coc / b_per_lu if b_per_lu > 0 else 0
+            no_lu_coc = math.ceil(actual_no_lu_coc)  
             
             if sp_needed == 'Yes':
                 no_tray_coc = daily_demand / (fill_tray * total_pck_loop_days) if (fill_tray * total_pck_loop_days) > 0 else 0
@@ -241,7 +244,8 @@ class LogisticsCostCalculator:
                 no_tray_coc = 0
             
             if add_sp_pack == 'Yes' and trays_per_sp_pal > 0:
-                no_sp_pallet_cover = no_tray_coc / trays_per_sp_pal
+                actual_no_sp_pallet_cover = no_tray_coc / trays_per_sp_pal
+                no_sp_pallet_cover = math.ceil(actual_no_sp_pallet_cover)
             else:
                 no_sp_pallet_cover = 0
 
@@ -278,7 +282,8 @@ class LogisticsCostCalculator:
             
             total_pck_cost = self.packaging_cost_total(material, packaging_config, operations_config)
 
-            pck_per_pcs = (scrap_paper + scrap_wood + total_pck_cost) / lifetime_vol
+            actual_pck_per_pcs = (scrap_paper + scrap_wood + total_pck_cost) / lifetime_vol
+            pck_per_pcs = math.ceil(actual_pck_per_pcs * 1000) / 1000
 
             return max(0.0, pck_per_pcs)
 
@@ -499,7 +504,8 @@ class LogisticsCostCalculator:
             # Get CO2 cost per ton from co2_config
             co2_cost_per_ton = co2_config.get('cost_per_ton', 0) if co2_config else 0
 
-            co2_per_pcs = (emission * (co2_cost_per_ton / 1000.0)) / annual_volume
+            actual_co2_per_pcs = (emission * (co2_cost_per_ton / 1000.0)) / annual_volume
+            co2_per_pcs = math.ceil(actual_co2_per_pcs * 1000) / 1000
             return max(co2_per_pcs, 0)
         except Exception as e:
             self.calculation_errors.append(f"CO2 cost error: {e}")
@@ -554,7 +560,9 @@ class LogisticsCostCalculator:
             if use_pref == 'No':
                 dc = self.duty_cost_per_piece(material, customs_config, transport_config, packaging_config, operations_config)
                 tc = self.tariff_cost_per_piece(material, customs_config)
-                return dc + tc
+
+                customs_cost = math.ceil((dc + tc) * 1000) / 1000
+                return customs_cost
             else:
                 return 0.0
             
@@ -634,9 +642,11 @@ class LogisticsCostCalculator:
             lead_time = operations_config.get('lead_time', 0)
 
             if sp_needed == 'Yes' and sp_fill_qty_pcs_lu > 0:
-                safety_days = (lead_time * daily_demand) / sp_fill_qty_pcs_lu
+                actual_safety_days = (lead_time * daily_demand) / sp_fill_qty_pcs_lu
+                safety_days = math.ceil(actual_safety_days)
             elif fill_qty_lu > 0:
-                safety_days = (lead_time * daily_demand) / fill_qty_lu
+                actual_safety_days = (lead_time * daily_demand) / fill_qty_lu
+                safety_days = math.ceil(actual_safety_days)
             else:
                 safety_days = 0
 
@@ -652,7 +662,8 @@ class LogisticsCostCalculator:
         try:
             no_days = self.inventory_days(material, packaging_config)
             if no_days > 0:
-                storage_loc_local = 5 / no_days
+                actual_storage_loc_local = 5 / no_days
+                storage_loc_local = math.ceil(actual_storage_loc_local) 
             else:
                 storage_loc_local = 5  # Default
 
@@ -689,7 +700,8 @@ class LogisticsCostCalculator:
             if annual_volume <= 0:
                 annual_volume = 1
 
-            warehouse_per_pcs = (12 * storage_loc_total * cost_per_loc) / annual_volume
+            actual_warehouse_per_pcs = (12 * storage_loc_total * cost_per_loc) / annual_volume
+            warehouse_per_pcs = math.ceil(actual_warehouse_per_pcs * 1000) / 1000
 
             return max(warehouse_per_pcs, 0)
         
@@ -774,8 +786,8 @@ class LogisticsCostCalculator:
             loop_plant_days = self.packaging_loop_days(packaging_config)
             fill_qty_box = max(packaging_config.get('fill_qty_box', 1), 1)
             b_per_lu = self.no_boxes_per_lu(packaging_config)
-            no_box_loop_plant = (daily_demand * loop_plant_days) / fill_qty_box if fill_qty_box > 0 else 0
-            no_lu_loop_plant = no_box_loop_plant / b_per_lu if b_per_lu > 0 else 0
+            no_box_loop_plant = math.ceil(((daily_demand * loop_plant_days) / fill_qty_box if fill_qty_box > 0 else 0) / 10) *10
+            no_lu_loop_plant = math.ceil(no_box_loop_plant / b_per_lu if b_per_lu > 0 else 0)
 
             subsupplier_days = operations_config.get('subsupplier_box_days', 0)
             no_box_coc = (daily_demand * subsupplier_days) / fill_qty_box if fill_qty_box > 0 else 0

@@ -84,9 +84,9 @@
   ],
   "repacking": [
     {
-      "pcs_weight": "None",
-      "packaging_one_way": "N/A",
-      "packaging_returnable": "N/A"
+      "pcs_weight": "light\n(up to 0,050kg)",
+      "packaging_one_way": "one-way tray in cardboard/wooden box",
+      "packaging_returnable": "returnable trays"
     }
   ],
   "customs": [
@@ -128,7 +128,7 @@
     "auto_save": true
   },
   "metadata": {
-    "save_timestamp": "2025-07-02T08:45:24.103641",
+    "save_timestamp": "2025-06-30T08:36:29.140731",
     "version": "1.0.0"
   }
 }
