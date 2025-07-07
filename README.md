@@ -16,23 +16,23 @@ The Logistics Cost Automation Platform revolutionizes how organizations calculat
 
 ### Key Benefits
 
-- **💰 Cost Transparency**: Visualize all hidden costs in your supply chain
-- **⚡ 90% Time Reduction**: Automate complex calculations that typically take hours
-- **🎯 Data-Driven Decisions**: Compare suppliers and scenarios objectively
-- **🌍 Sustainability Focus**: Integrated CO₂ cost calculations
-- **📊 Professional Reports**: Export-ready Excel reports matching corporate templates
+- **Cost Transparency**: Visualize all hidden costs in your supply chain
+- **90% Time Reduction**: Automate complex calculations that typically take hours
+- **Data-Driven Decisions**: Compare suppliers and scenarios objectively
+- **Sustainability Focus**: Integrated CO₂ cost calculations
+- **Professional Reports**: Export-ready Excel reports matching corporate templates
 
-## ✨ Features
+##  Features
 
 ### Core Functionality
 
-#### 📦 **Material & Supplier Management**
+####  **Material & Supplier Management**
 - Comprehensive material database with specifications
 - Multi-supplier comparison capabilities
 - Automated material-supplier pairing analysis
 - Performance tracking and delivery metrics
 
-#### 💵 **Cost Component Analysis**
+####  **Cost Component Analysis**
 - **Packaging Costs**: Dual-strategy optimization (Plant vs CoC)
 - **Transport Costs**: Multi-modal transportation with route optimization
 - **Warehouse Costs**: Dynamic safety stock calculations
@@ -40,25 +40,25 @@ The Logistics Cost Automation Platform revolutionizes how organizations calculat
 - **Environmental Costs**: CO₂ emissions pricing
 - **Financial Costs**: Inventory carrying cost analysis
 
-#### 🔄 **Advanced Calculations**
+####  **Advanced Calculations**
 - 13-stage packaging loop optimization
 - Minimum Order Quantity (MOQ) calculations
 - Lead time impact analysis
 - Special packaging requirements handling
 
-#### 💾 **Data Management**
+####  **Data Management**
 - Persistent JSON-based storage
 - Automatic backup system (last 10 versions)
 - Import/Export configuration templates
 - Session recovery after browser closure
 
-#### 📊 **Reporting & Analytics**
+####  **Reporting & Analytics**
 - Professional Excel exports with formatting
 - Multi-format support (CSV, JSON, Excel)
 - Cost breakdown visualizations
 - Supplier comparison matrices
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 
@@ -115,21 +115,21 @@ Modern web browser (Chrome, Firefox, Safari, Edge)
 ### Navigation Structure
 
 ```
-🏠 Overview                    # Dashboard and system status
-├── 📦 Material Information    # Product specifications
-├── 🏭 Supplier Information    # Vendor details and performance
-├── 📍 KB/Bendix Location Info # Plant locations and distances
-├── ⚙️ Operations Information  # Incoterms, lead times, currencies
-├── 📦 Packaging Cost          # Container and packaging setup
-├── 🔄 Repacking Cost         # Material handling costs
-├── 🛃 Customs Cost           # Import/export duties
-├── 🚚 Transport Cost         # Shipping and logistics
-├── 🌱 Annual CO₂ Cost        # Environmental impact costs
-├── 🏗️ Warehouse Cost         # Storage expenses
-├── 💰 Inventory Cost         # Interest rates
-├── ➕ Additional Cost        # Other configurable costs
-├── 🧮 Cost Calculation       # Run calculations and export
-└── ⚙️ Settings              # Data persistence options
+ Overview                    # Dashboard and system status
+├──  Material Information    # Product specifications
+├──  Supplier Information    # Vendor details and performance
+├──  KB/Bendix Location Info # Plant locations and distances
+├──  Operations Information  # Incoterms, lead times, currencies
+├──  Packaging Cost          # Container and packaging setup
+├──  Repacking Cost         # Material handling costs
+├──  Customs Cost           # Import/export duties
+├──  Transport Cost         # Shipping and logistics
+├──  Annual CO₂ Cost        # Environmental impact costs
+├──  Warehouse Cost         # Storage expenses
+├──  Inventory Cost         # Interest rates
+├──  Additional Cost        # Other configurable costs
+├──  Cost Calculation       # Run calculations and export
+└──  Settings              # Data persistence options
 ```
 
 ### Detailed Feature Documentation
@@ -164,7 +164,7 @@ The system tracks packaging through 13 stages:
 - Additional packaging (pallets, covers)
 - Automated filling quantity calculations
 
-## 🏗️ Architecture
+##  Architecture
 
 ### System Components
 
@@ -191,35 +191,6 @@ The system tracks packaging through 13 stages:
 │  │    State    │  │   Storage   │  │   System    │    │
 │  └─────────────┘  └─────────────┘  └─────────────┘    │
 └─────────────────────────────────────────────────────────┘
-```
-
-### Key Algorithms
-
-#### Packaging Cost Calculation
-```python
-Packaging Cost = (Plant Cost + CoC Cost + Maintenance + Scrapping) / Lifetime Volume
-
-Where:
-- Plant Cost = Σ(Box Cost × Quantity) + Σ(Pallet Cost × Quantity)
-- CoC Cost = Special Packaging + Tooling Amortization
-```
-
-#### Transport Cost Formula
-```python
-Transport Cost per Piece = Cost per Load Unit / Filling Quantity per LU
-
-Adjustments:
-- Sea freight: Considers overseas packaging
-- Incoterms: FCA/FOB include bonded warehouse costs
-```
-
-#### Warehouse Cost Model
-```python
-Warehouse Cost = (Storage Locations × Monthly Cost × 12) / Annual Volume
-
-Where:
-- Storage Locations = Local Supply + Safety Stock
-- Safety Stock = ⌈(Lead Time × Daily Demand) / Fill Quantity⌉
 ```
 
 ## 🔧 Configuration
@@ -257,7 +228,7 @@ export STREAMLIT_SERVER_ADDRESS=0.0.0.0
 export STREAMLIT_THEME_PRIMARY_COLOR="#1f77b4"
 ```
 
-## 📊 Data Formats
+##  Data Formats
 
 ### Export Formats
 
@@ -282,7 +253,7 @@ export STREAMLIT_THEME_PRIMARY_COLOR="#1f77b4"
 }
 ```
 
-## 🚦 Validation Rules
+##  Validation Rules
 
 The platform enforces strict validation to ensure data quality:
 
@@ -292,14 +263,14 @@ The platform enforces strict validation to ensure data quality:
 - **Currencies**: Standard 3-letter codes
 - **Lead Times**: 0-365 days
 
-## 🔒 Security & Compliance
+##  Security & Compliance
 
 - Local data storage (no cloud dependencies)
 - No external API calls for sensitive data
 - GDPR-compliant data handling
 - Role-based access control ready
 
-## 🤝 Contributing
+##  Contributing
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
@@ -324,14 +295,14 @@ black --check utils/
 - Write unit tests for new features
 - Update documentation accordingly
 
-## 📈 Performance
+##  Performance
 
 - **Calculation Speed**: <1 second for 100 material-supplier pairs
 - **Memory Usage**: ~50MB for typical datasets
 - **Browser Support**: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
 - **Concurrent Users**: Supports multiple simultaneous sessions
 
-## 🐛 Troubleshooting
+##  Troubleshooting
 
 ### Common Issues
 
@@ -356,7 +327,7 @@ black --check utils/
 streamlit run Overview.py --logger.level=debug
 ```
 
-## 📚 API Reference
+##  API Reference
 
 ### Data Manager API
 
@@ -388,25 +359,18 @@ result = calc.calculate_total_logistics_cost(
 )
 ```
 
-## 📄 License
+##  Acknowledgments
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+- Developed by Marawan Younis
+- Special thanks to all Logistikplanung Team members
 
-## 🌟 Acknowledgments
-
-- Developed by the Supply Chain Innovation Team
-- Special thanks to all beta testers and contributors
-- Icons by [Streamlit](https://streamlit.io)
-
-## 📞 Support
+##  Support
 
 - **Documentation**: [Full Documentation](docs/)
-- **Issues**: [GitHub Issues](https://github.com/your-org/logistics-cost-automation/issues)
-- **Email**: logistics-support@company.com
-- **Wiki**: [Project Wiki](https://github.com/your-org/logistics-cost-automation/wiki)
+- **Issues**: [GitHub Issues](https://github.com/Marawan-Y/logistics-cost-automation/issues)
+- **Email**: marawan.younis@knorr-bremse.com
+- **Wiki**: [Project Wiki](https://github.com/Marawan-Y/logistics-cost-automation/wiki)
 
 ---
 
-**[⬆ back to top](#logistics-cost-automation-platform)**
-
-<p align="center">Made with ❤️ by the Logistics Team</p>
+**[⬆ back to top](#logistics-cost-estimation-platform)**
