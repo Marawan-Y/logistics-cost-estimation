@@ -3,7 +3,6 @@
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/your-org/logistics-cost-automation)
 [![Python](https://img.shields.io/badge/python-3.8+-yellow.svg)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/streamlit-1.45+-red.svg)](https://streamlit.io/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Documentation](https://img.shields.io/badge/docs-available-brightgreen.svg)](docs/)
 
 A comprehensive enterprise-grade platform for automating logistics cost calculations across the entire supply chain. Designed for procurement professionals, supply chain managers, and logistics teams to make data-driven sourcing decisions.
