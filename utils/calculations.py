@@ -15,7 +15,8 @@ class LogisticsCostCalculator:
     """
     def __init__(self):
         self.calculation_errors = []
-           
+
+    # --- Material-level calculations -----------------------------------------   
     def lifetime_volume(self, material):
         """
         d = lifetime_volume = annual_volume * lifetime_years
@@ -29,7 +30,29 @@ class LogisticsCostCalculator:
         else:
             # Use lifetime_volume if provided, otherwise default to annual_volume
             return material.get('lifetime_volume', av)
+    # --- Operations-level calculations -----------------------------------------
+    def MOQ(self, material, supplier, packaging_config):
+        """
+        Minimum Order Quantity (MOQ) based on operations configuration.
+        """
+        daily_demand = material.get('daily_demand', 0)
+        deliveries_per_month = supplier.get('deliveries_per_month', 1)
+        fill_qty_tray = packaging_config.get('fill_qty_tray', 1)
+        no_trays_per_sp_pal = packaging_config.get('trays_per_sp_pal', 1)
+        sp_pallets_per_lu = packaging_config.get('sp_pallets_per_lu', 0)
 
+        fill_qty_box = packaging_config.get('fill_qty_box', 0)
+        b_per_layer = self.boxes_per_layer(packaging_config)
+
+        sp_needed = packaging_config.get('sp_needed', 'No')
+        sp_type = packaging_config.get('sp_type', '')
+
+        if sp_needed == 'Yes' and sp_type == 'Standalone tray':
+            moq = math.ceil((daily_demand * 20) / (deliveries_per_month * fill_qty_tray * no_trays_per_sp_pal * sp_pallets_per_lu)) * fill_qty_tray * no_trays_per_sp_pal * sp_pallets_per_lu
+        else:
+            moq = math.ceil((daily_demand * 20) / (deliveries_per_month * fill_qty_box * b_per_layer)) * fill_qty_box * b_per_layer 
+        
+        return moq
     # --- Packaging-level calculations -----------------------------------------
     # ---------------- Standard Boxes Table Parameters ----------------
     def packaging_characteristics(self, packaging_config):
@@ -127,6 +150,15 @@ class LogisticsCostCalculator:
         p_type = packaging_config.get('pallet_type', 'EURO Pallet Price')
         pallet_price = ACCESSORY_PACKAGING.get(p_type, {}).get("Ave_Price", 24.5)
         return pallet_price
+    
+    def boxes_per_layer(self, packaging_config):
+        """
+        H[#] @ "Standard Boxes" Sheet -- [A]
+        This is a direct value from the packaging tables.
+        """
+        b_type = packaging_config.get('box_type', 'None')
+        b_per_layer = STANDARD_BOXES.get(b_type, {}).get("Boxes_per_layer", 1)
+        return max(b_per_layer, 1)  # Avoid division by zero
 
     # --- Packaging-level calculations continued ----------------------------    
     def packaging_loop_days(self, packaging_config):
@@ -360,6 +392,23 @@ class LogisticsCostCalculator:
             return 0.0
 
     # --- Transport-level calculations -----------------------------------------
+    def pallets_per_delivery(self, material, supplier, packaging_config):
+        """"
+        Pallets per delivery
+        """
+        daily_demand = material.get('daily_demand', 0)
+        deliveries_per_month = supplier.get('deliveries_per_month', 1)
+        fill_qty_lu = self.filling_qty_pcs_per_lu(packaging_config)
+        sp_fill_qty_pcs_lu = self.SP_Filling_Qty_Pcs_lu(packaging_config)
+        sp_needed = packaging_config.get('sp_needed', 'No')
+
+        if sp_needed == 'Yes' :
+            pallets_per_delivery = math.ceil((daily_demand * 20) / (deliveries_per_month * sp_fill_qty_pcs_lu))
+        else:
+            pallets_per_delivery = math.ceil((daily_demand * 20) / (deliveries_per_month * fill_qty_lu))
+
+        return pallets_per_delivery
+    
     def transport_cost_per_piece(self, transport_config, packaging_config, operations_config, location_config=None):
         """
         X4 = transport cost per piece
@@ -839,6 +888,7 @@ class LogisticsCostCalculator:
                 # Operations
                 'Incoterm code': operations_config.get('incoterm_code') if operations_config else 'N/A',
                 'Incoterm Named Place': operations_config.get('incoterm_place') if operations_config else 'N/A',
+                'MOQ': self.MOQ(material, supplier, packaging_config),
                 'Call-off transfer type': operations_config.get('calloff_type') if operations_config else 'N/A',
                 'Lead time (d)': operations_config.get('lead_time') if operations_config else 0,
                 'Sub-Supplier Used': operations_config.get('subsupplier_used') if operations_config else 'N/A',
@@ -896,6 +946,7 @@ class LogisticsCostCalculator:
                 # Transport
                 'transport_cost_per_piece': transport_cost,
                 'Transport type': transport_config.get('mode1'),
+                'pallets_per_delivery': self.pallets_per_delivery(material, supplier, packaging_config),
                 'Transport cost per LU': transport_config.get('cost_lu'),
                 # Warehouse
                 'warehouse_cost_per_piece': warehouse_cost,

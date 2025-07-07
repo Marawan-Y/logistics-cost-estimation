@@ -31,6 +31,7 @@ class LogisticsExcelExporter:
             'header': Font(name='Arial', size=12, bold=True, color=self.colors['text_blue']),
             'subheader': Font(name='Arial', size=10, bold=True, color=self.colors['text_black']),
             'normal': Font(name='Arial', size=10, color=self.colors['text_black']),
+            'normal_bold': Font(name='Arial', size=10, bold=True, color=self.colors['text_black']),  # Added for bold normal text
             'small': Font(name='Arial', size=9, color=self.colors['text_black'])
         }
         
@@ -280,6 +281,7 @@ class LogisticsExcelExporter:
         operations_info = [
             ("Incoterm Code", data.get('Incoterm code', '')),
             ("Incoterm Named Place", data.get('Incoterm Named Place', '')),
+            ("MOQ*", data.get('MOQ', '')),
             ("Call-off transfer type", data.get('Call-off transfer type', '')),
             ("Lead time (d)", data.get('Lead time (d)', '')),
             ("Sub-supplier used?", data.get('Sub-Supplier Used', ''))
@@ -301,7 +303,7 @@ class LogisticsExcelExporter:
         # Section header
         ws.merge_cells(f'A{row}:C{row}')
         header_cell = ws[f'A{row}']
-        header_cell.value = "Packaging Information KB supplier"
+        header_cell.value = "Packaging Information"
         header_cell.font = self.fonts['subheader']
         header_cell.fill = self.fills['section_gray']
         header_cell.border = self.border
@@ -336,7 +338,7 @@ class LogisticsExcelExporter:
         header_cell.border = self.border
         row += 1
         
-        # Price and packaging costs
+        # Price and packaging costs - BOLD
         price_pcs = data.get('Price (Pcs)', 0)
         packaging_cost_pcs = data.get('packaging_cost_per_piece', 0)
         
@@ -348,7 +350,7 @@ class LogisticsExcelExporter:
         for label, value in calc_items:
             ws[f'A{row}'] = label
             ws[f'B{row}'] = value
-            ws[f'A{row}'].font = self.fonts['normal']
+            ws[f'A{row}'].font = self.fonts['normal_bold']  # Changed to bold
             ws[f'B{row}'].font = self.fonts['normal']
             row += 1
         
@@ -364,10 +366,12 @@ class LogisticsExcelExporter:
         ws[f'B{row}'] = f"{coc_cost:.2f} €"
         row += 1
         
-        # Packaging Loop
+        # Packaging Loop - BOLD
         packaging_loop = data.get('Packaging Loop', 0)
         ws[f'A{row}'] = "Packaging Loop"
         ws[f'B{row}'] = f"{packaging_loop} days"
+        ws[f'A{row}'].font = self.fonts['normal_bold']  # Changed to bold
+        ws[f'B{row}'].font = self.fonts['normal']
         row += 1
         
         # Loop details with indentation
@@ -394,7 +398,7 @@ class LogisticsExcelExporter:
             ws[f'B{row}'].font = self.fonts['small']
             row += 1
         
-        # Other cost components
+        # Other cost components - BOLD
         other_costs = [
             ("Repacking cost (pcs)", f"{data.get('repacking_cost_per_piece', 0):.3f} €"),
             ("Customs cost (pcs)", f"{data.get('customs_cost_per_piece', 0):.3f} €"),
@@ -405,11 +409,15 @@ class LogisticsExcelExporter:
         for label, value in other_costs:
             ws[f'A{row}'] = label
             ws[f'B{row}'] = value
-            ws[f'A{row}'].font = self.fonts['normal']
+            # Make these labels bold
+            if label in ["Repacking cost (pcs)", "Transport cost (pcs)", "customs cost (pcs)"]:
+                ws[f'A{row}'].font = self.fonts['normal_bold']
+            else:
+                ws[f'A{row}'].font = self.fonts['normal']
             ws[f'B{row}'].font = self.fonts['normal']
             row += 1
         
-        return row + 1
+        return row  
     
     def _add_transport_section(self, ws, start_row, data):
         """Add transport section"""
@@ -417,7 +425,7 @@ class LogisticsExcelExporter:
         
         transport_info = [
             ("Transport type", data.get('Transport type', '')),
-            ("Pallets per delivery", "1"),  # Default value as shown in template
+            ("Pallets per delivery", data.get('pallets_per_delivery', 0)), 
             ("Transportation cost per LU", f"{data.get('Transport cost per LU', 0):.2f} €"),
             ("annual CO2 cost (pcs)", f"{data.get('co2_cost_per_piece', 0):.3f} €")
         ]
@@ -425,11 +433,15 @@ class LogisticsExcelExporter:
         for label, value in transport_info:
             ws[f'A{row}'] = label
             ws[f'B{row}'] = value
-            ws[f'A{row}'].font = self.fonts['normal']
+            # Make annual CO2 cost bold
+            if label == "annual CO2 cost (pcs)":
+                ws[f'A{row}'].font = self.fonts['normal_bold']
+            else:
+                ws[f'A{row}'].font = self.fonts['normal']
             ws[f'B{row}'].font = self.fonts['normal']
             row += 1
         
-        return row + 1
+        return row 
     
     def _add_warehouse_section(self, ws, start_row, data):
         """Add warehouse and additional costs section"""
@@ -444,10 +456,23 @@ class LogisticsExcelExporter:
             ("other / additional cost (pcs)", f"{data.get('additional_cost_per_piece', 0):.3f} €")
         ]
         
+        # List of labels that should be bold
+        bold_labels = [
+            "Warehouse cost (pcs)",
+            "Excessive inventory cost (pcs)",
+            "Total Inventory cost (parts in WH)",
+            "Inventory Interest",
+            "other / additional cost (pcs)"
+        ]
+        
         for label, value in warehouse_info:
             ws[f'A{row}'] = label
             ws[f'B{row}'] = value
-            ws[f'A{row}'].font = self.fonts['normal']
+            # Make specified labels bold
+            if label in bold_labels:
+                ws[f'A{row}'].font = self.fonts['normal_bold']
+            else:
+                ws[f'A{row}'].font = self.fonts['normal']
             ws[f'B{row}'].font = self.fonts['normal']
             row += 1
         
