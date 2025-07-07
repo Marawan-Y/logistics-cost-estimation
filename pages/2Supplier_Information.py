@@ -116,7 +116,7 @@ def main():
                     st.write(f"**Deliveries/Month:** {supplier.get('deliveries_per_month', 0)}")
                 
                 with col2:
-                    if st.button("Edit", key=f"edit_supplier_{i}"):
+                    if st.button("Edit", key=f"btn_edit_supplier_{i}"):
                         st.session_state[f'edit_supplier_{i}'] = True
                         st.rerun()
                 

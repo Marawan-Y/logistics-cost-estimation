@@ -62,7 +62,7 @@ def main():
                 st.write(f"**Cost per Ton:** €{co2['cost_per_ton']:.2f}")
                 st.write(f"**CO₂ Conversion Factor:** {co2['co2_conversion_factor']}")
             with col2:
-                if st.button("Edit", key=f"edit_co2_{i}"):
+                if st.button("Edit", key=f"btn_edit_co2_{i}"):
                     st.session_state[f"edit_co2_{i}"] = True
                     st.rerun()
             with col3:

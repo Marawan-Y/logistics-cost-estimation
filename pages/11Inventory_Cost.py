@@ -57,7 +57,7 @@ def main():
             with col1:
                 st.write(f"**Rate:** {intr['rate']:.2f}%")
             with col2:
-                if st.button("Edit", key=f"edit_int_{i}"):
+                if st.button("Edit", key=f"btn_edit_int_{i}"):
                     st.session_state[f"edit_int_{i}"] = True
                     st.rerun()
             with col3:

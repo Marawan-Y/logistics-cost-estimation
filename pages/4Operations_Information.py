@@ -98,7 +98,7 @@ def main():
                 st.write(f"**Packaging Tool Owner:** {rec['packaging_tool_owner']}")
                 st.write(f"**Responsible:** {rec['responsible']}")
             with col2:
-                if st.button("Edit", key=f"edit_ops_{i}"):
+                if st.button("Edit", key=f"btn_edit_ops_{i}"):
                     st.session_state[f"edit_ops_{i}"] = True
                     st.rerun()
             with col3:
@@ -129,8 +129,8 @@ def main():
                         index=calloff_options.index(rec["calloff_type"])
                     )
                     new_directive = st.selectbox(
-                        "Directive", directive_options,
-                        index=directive_options.index(rec["directive"])
+                        "Directive", yes_no,
+                        index=yes_no.index(rec["directive"])
                     )
                     new_lead_time = st.number_input(
                         "Lead Time (days)",
