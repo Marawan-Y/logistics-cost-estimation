@@ -56,7 +56,7 @@ def main():
             with col1:
                 st.write(f"**Cost per Location:** €{wh['cost_per_loc']:.2f}")
             with col2:
-                if st.button("Edit", key=f"edit_wh_{i}"):
+                if st.button("Edit", key=f"btn_edit_wh_{i}"):
                     st.session_state[f"edit_wh_{i}"] = True
                     st.rerun()
             with col3:

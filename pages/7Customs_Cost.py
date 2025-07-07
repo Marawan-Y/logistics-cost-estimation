@@ -83,7 +83,7 @@ def main():
                 st.write(f"**Duty Rate:** {cust['duty_rate']:.2f}%")
                 st.write(f"**Tariff Rate:** {cust['tariff_rate']:.2f}%")
             with col2:
-                if st.button("Edit", key=f"edit_cust_{i}"):
+                if st.button("Edit", key=f"btn_edit_cust_{i}"):
                     st.session_state[f"edit_cust_{i}"] = True
                     st.rerun()
             with col3:
