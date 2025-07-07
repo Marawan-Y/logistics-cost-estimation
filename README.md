@@ -8,7 +8,7 @@
 
 A comprehensive enterprise-grade platform for automating logistics cost calculations across the entire supply chain. Designed for procurement professionals, supply chain managers, and logistics teams to make data-driven sourcing decisions.
 
-![Logistics Cost Automation Dashboard](docs/images/dashboard-preview.png)
+![Logistics Cost Automation Dashboard](attached_assets/images/dashboard-preview.png)
 
 ## 🎯 Overview
 
