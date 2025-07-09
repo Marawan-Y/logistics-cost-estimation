@@ -9,7 +9,7 @@ A comprehensive enterprise-grade platform for automating logistics cost calculat
 
 ![Logistics Cost Automation Dashboard](attached_assets/images/dashboard-preview.png)
 
-## 🎯 Overview
+## Overview
 
 The Logistics Cost Automation Platform revolutionizes how organizations calculate and analyze their total landed costs. By considering all cost components from supplier to warehouse, including packaging, transport, customs, and environmental factors, it provides a complete picture of logistics expenses.
 
