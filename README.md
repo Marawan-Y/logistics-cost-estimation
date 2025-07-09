@@ -365,7 +365,7 @@ result = calc.calculate_total_logistics_cost(
 
 ##  Support
 
-- **Documentation**: [Full Documentation](docs/)
+- **Documentation**: [Full Documentation](docs/logistics-full-docs.md)
 - **Email**: marawan.younis@knorr-bremse.com
 
 ---
