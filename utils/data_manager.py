@@ -468,45 +468,42 @@ class DataManager:
     
     # Customs management
     def add_customs(self, customs_data: Dict[str, Any]) -> bool:
-        """Add new customs configuration."""
+        """Add a new customs configuration."""
         try:
             st.session_state.customs.append(customs_data)
             self._save_data_automatically()
             return True
         except Exception:
             return False
-    
+
     def get_customs(self) -> List[Dict[str, Any]]:
         """Get all customs configurations."""
         return st.session_state.customs
-    
-    def customs_exists(self, hs_code: str) -> bool:
-        """Check if customs configuration exists for HS code."""
-        return any(c['hs_code'] == hs_code for c in st.session_state.customs)
-    
-    def update_customs(self, hs_code: str, updated_data: Dict[str, Any]) -> bool:
-        """Update customs configuration by HS code."""
+
+    def update_customs(self, index: int, updated_data: Dict[str, Any]) -> bool:
+        """Update customs configuration by its index."""
         try:
-            for i, customs in enumerate(st.session_state.customs):
-                if customs['hs_code'] == hs_code:
-                    st.session_state.customs[i] = updated_data
-                    self._save_data_automatically()
-                    return True
+            if 0 <= index < len(st.session_state.customs):
+                st.session_state.customs[index] = updated_data
+                self._save_data_automatically()
+                return True
             return False
         except Exception:
             return False
-    
-    def remove_customs(self, hs_code: str) -> bool:
-        """Remove customs configuration by HS code."""
+
+    def remove_customs(self, index: int) -> bool:
+        """Remove customs configuration by its index."""
         try:
+            # Mirror transport: rebuild the list minus the one at `index`
             st.session_state.customs = [
-                c for c in st.session_state.customs 
-                if c['hs_code'] != hs_code
+                c for idx, c in enumerate(st.session_state.customs)
+                if idx != index
             ]
             self._save_data_automatically()
             return True
         except Exception:
             return False
+
     
     # Transport management
     def add_transport(self, transport_data: Dict[str, Any]) -> bool:

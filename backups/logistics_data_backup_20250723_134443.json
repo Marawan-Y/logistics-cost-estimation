@@ -5,7 +5,18 @@
   "operations": [],
   "packaging": [],
   "repacking": [],
-  "customs": [],
+  "customs": [
+    {
+      "pref_usage": "Yes",
+      "hs_code": "A",
+      "duty_rate": 0.0,
+      "tariff_rate": 0.0
+    },
+    {
+      "pref_usage": "Yes",
+      "duty_rate": 0.0
+    }
+  ],
   "transport": [],
   "co2": [
     {
@@ -28,7 +39,7 @@
     "auto_save": true
   },
   "metadata": {
-    "save_timestamp": "2025-07-23T13:44:44.733571",
+    "save_timestamp": "2025-07-23T13:08:16.319662",
     "version": "1.0.0"
   }
 }

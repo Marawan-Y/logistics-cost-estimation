@@ -51,44 +51,33 @@ def main():
                 help="Describe the intended usage for this material"
             )
 
-            daily_demand = st.number_input(
-                "Daily demand (average)",
-                min_value=0.0,
-                step=0.01,
-                help="Average daily demand (pcs)"
-            )
-
+        with col2:
+            # Removed: lifetime_volume - marked as "not needed"
+            # Removed: peak_year - marked as "not needed"
+            # Removed: peak_year_volume - marked as "not needed"
+            # Switched position - Annual volume now above Daily demand
             annual_volume = st.number_input(
                 "Annual volume (average) *",
                 min_value=0,
                 step=1,
+                format="%d",  # Integer formatting
                 help="Average annual demand in pieces"
             )
 
-        with col2:
-            lifetime_volume = st.number_input(
-                "Lifetime (volume)",
+            daily_demand = st.number_input(
+                "Daily demand (average)",
                 min_value=0.0,
-                step=0.1,
-                help="Expected lifetime of the material"
+                step=0.01,
+                format="%.2f",
+                help="Average daily demand (pcs)"
             )
-
-            peak_year = st.text_input(
-                "Peak year",
-                help="Indicate the year with the highest demand/volume"
-            )
-
-            peak_year_volume = st.number_input(
-                "Peak year volume",
-                min_value=0,
-                step=1,
-                help="Volume for the peak year (pcs)"
-            )
-
+                        
             working_days = st.number_input(
                 "Working Days per year",
                 min_value=0,
                 step=1,
+                value=250,  # Changed default from 0 to 250
+                format="%d",
                 help="Number of working days per year"
             )
 
@@ -101,6 +90,7 @@ def main():
                 "Pcs_Price",
                 min_value=0.0,
                 step=0.01,
+                format="%.2f",
                 help="Material Price / Piece"
             )
 
@@ -116,9 +106,9 @@ def main():
                 'usage': usage,
                 'daily_demand': daily_demand,
                 'annual_volume': annual_volume,
-                'lifetime_volume': lifetime_volume,
-                'peak_year': peak_year,
-                'peak_year_volume': peak_year_volume,
+                'lifetime_volume': 0.0,  # Keep for backward compatibility but set to 0
+                'peak_year': '',  # Keep for backward compatibility but empty
+                'peak_year_volume': 0,  # Keep for backward compatibility but set to 0
                 'working_days': working_days,
                 'sop': sop,
                 'Pcs_Price': Pcs_Price
@@ -152,14 +142,12 @@ def main():
                     st.write(f"**Project Name:** {material.get('project_name', 'N/A')}")
                     st.write(f"**Weight per pcs:** {material.get('weight_per_pcs', 0):.3f} kg")
                     st.write(f"**Annual volume:** {material.get('annual_volume', 0):,} pcs")
-                    st.write(f"**Lifetime (years):** {material.get('lifetime_volume', 'N/A')}")
-                    st.write(f"**Peak year:** {material.get('peak_year', 'N/A')}")
-                    st.write(f"**Peak year volume:** {material.get('peak_year_volume', 'N/A')}")
-                    st.write(f"**Working Days/year:** {material.get('working_days', 'N/A')}")
+                    # Removed lifetime, peak year, and peak year volume from display
+                    st.write(f"**Working Days/year:** {material.get('working_days', 250)}")
                     st.write(f"**SOP:** {material.get('sop', 'N/A')}")
                     st.write(f"**Usage:** {material.get('usage', 'N/A')}")
-                    st.write(f"**Daily demand:** {material.get('daily_demand', 'N/A')} pcs")
-                    st.write(f"**Pcs_Price:** {material.get('Pcs_Price', 'N/A')} €")               
+                    st.write(f"**Daily demand:** {material.get('daily_demand', 0):.2f} pcs")
+                    st.write(f"**Pcs_Price:** €{material.get('Pcs_Price', 0):.2f}")               
                 with col2:
                     if st.button("Edit", key=f"edit_{i}"):
                         st.session_state[f'edit_material_{i}'] = True
@@ -199,52 +187,40 @@ def main():
                             "Usage",
                             value=material.get('usage', '')
                         )
-                        new_daily_demand = st.number_input(
-                            "Daily demand (average)",
-                            value=material.get('daily_demand', 0.0),
-                            min_value=0.0,
-                            step=0.01
-                        )
                         new_annual_volume = st.number_input(
                             "Annual volume (average)",
                             value=material.get('annual_volume', 0),
                             min_value=0,
-                            step=1
+                            step=1,
+                            format="%d"
+                        )
+                        new_daily_demand = st.number_input(
+                            "Daily demand (average)",
+                            value=material.get('daily_demand', 0.0),
+                            min_value=0.0,
+                            step=0.01,
+                            format="%.2f"
                         )
                     
                     with col2:
-                        new_lifetime_volume = st.number_input(
-                            "Lifetime (volume)",
-                            value=material.get('lifetime_volume', 0.0),
-                            min_value=0.0,
-                            step=0.1
-                        )
-                        new_peak_year = st.text_input(
-                            "Peak year",
-                            value=material.get('peak_year', '')
-                        )
-                        new_peak_year_volume = st.number_input(
-                            "Peak year volume",
-                            value=material.get('peak_year_volume', 0),
-                            min_value=0,
-                            step=1
-                        )
+                        # Removed lifetime, peak year, and peak year volume from edit form
                         new_working_days = st.number_input(
                             "Working Days per year",
-                            value=material.get('working_days', 0),
+                            value=material.get('working_days', 250),
                             min_value=0,
-                            step=1
+                            step=1,
+                            format="%d"
                         )
                         new_sop = st.text_input(
                             "SOP",
                             value=material.get('sop', '')
                         )
-
                         new_Pcs_Price = st.number_input(
                             "Pcs_Price",
                             value=material.get('Pcs_Price', 0.0),
                             min_value=0.0,
-                            step=0.01
+                            step=0.01,
+                            format="%.2f"
                         )
 
                     col1, col2 = st.columns(2)
@@ -258,9 +234,9 @@ def main():
                                 'usage': new_usage,
                                 'daily_demand': new_daily_demand,
                                 'annual_volume': new_annual_volume,
-                                'lifetime_volume': new_lifetime_volume,
-                                'peak_year': new_peak_year,
-                                'peak_year_volume': new_peak_year_volume,
+                                'lifetime_volume': material.get('lifetime_volume', 0.0),  # Keep existing value for compatibility
+                                'peak_year': material.get('peak_year', ''),  # Keep existing value for compatibility
+                                'peak_year_volume': material.get('peak_year_volume', 0),  # Keep existing value for compatibility
                                 'working_days': new_working_days,
                                 'sop': new_sop,
                                 'Pcs_Price': new_Pcs_Price
