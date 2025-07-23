@@ -131,10 +131,33 @@ def main():
         st.markdown("---")
         # 6.4 Total Packaging Loop (Qty of LUs at Each Stage)
         st.markdown("**6.4 ‒ Total Packaging Loop (Quantity of LUs)**")
+        # Define clusters
+        kb_fields = [
+            "goods receipt", "stock raw materials", "production",
+            "empties return", "cleaning", "dispatch",
+            "empties transit (KB → Supplier)"
+        ]
+        supplier_fields = [
+            "empties receipt (at Supplier)", "empties in stock (Supplier)",
+            "production (contrary loop)", "stock finished parts",
+            "dispatch (finished parts)", "transit (Supplier → KB)"
+        ]
+
         loop_data = {}
-        cols = st.columns(4)
-        for idx, field in enumerate(loop_fields):
-            loop_data[field] = cols[idx % 4].number_input(
+
+        st.markdown("**KB**")
+        cols_kb = st.columns(4)
+        for idx, field in enumerate(kb_fields):
+            loop_data[field] = cols_kb[idx % 4].number_input(
+                field.title(),
+                min_value=0, step=1,
+                help=f"Number of LUs for {field}"
+            )
+
+        st.markdown("**Supplier**")
+        cols_sup = st.columns(4)
+        for idx, field in enumerate(supplier_fields):
+            loop_data[field] = cols_sup[idx % 4].number_input(
                 field.title(),
                 min_value=0, step=1,
                 help=f"Number of LUs for {field}"

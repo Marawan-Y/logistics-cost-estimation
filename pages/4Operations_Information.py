@@ -22,7 +22,10 @@ def main():
     ownership_options = ["Supplier", "KB", "Customer"]
     responsible_opts = ["Supplier", "CoC"]
     currency_opts = ["EUR", "USD", "RMB", "YEN", "GBP"]
-
+    # Default changed to "No"
+    subsupplier_used = st.selectbox(
+        "Sub-supplier used *", yes_no, index=1, key="subs_used"  # index=1 selects "No" by default
+    )
     # ---------- Add ----------
     with st.form("operations_form"):
         st.subheader("Add New Operations Record")
@@ -33,22 +36,35 @@ def main():
             incoterm_place = st.text_input("Incoterm Named Place *")
             part_class = st.selectbox("Part Classification *", classification_options)
             calloff_type = st.selectbox("Call-off Transfer Type *", calloff_options)
+            # Made optional - removed asterisk
             directive = st.selectbox(
-                "Latest Version (Y031010) of Logistics Directive *", yes_no
+                "Latest Version (Y031010) of Logistics Directive", yes_no
             )
             lead_time = st.number_input("Lead Time (days) *", min_value=0, step=1)
+            
         with col2:
-            subsupplier_used = st.selectbox(
-                "Sub-supplier used *", yes_no
-            )
-            subsupplier_box_days = st.number_input(
-                "Sub-supplier need for boxes (days)", min_value=0, step=1
-            )
+            
+            # Show sub-supplier box days only if sub-supplier is used
+            if subsupplier_used == "Yes":
+                subsupplier_box_days = st.number_input(
+                    "Sub-supplier need for boxes (days)", min_value=0, step=1
+                )
+            else:
+                subsupplier_box_days = 0  # Default value when not shown
+            
+            # Made optional - removed asterisk
             packaging_tool_owner = st.selectbox(
-                "Packaging Tool Ownership *", ownership_options
+                "Packaging Tool Ownership", ownership_options
             )
-            responsible = st.selectbox("Responsible *", responsible_opts)
-            currency = st.selectbox("Currency *", currency_opts)
+            
+            # Show responsible as required only if sub-supplier is used
+            if subsupplier_used == "Yes":
+                responsible = st.selectbox("Responsible *", responsible_opts)
+            else:
+                responsible = st.selectbox("Responsible", responsible_opts)
+            
+            # Made optional - removed asterisk
+            currency = st.selectbox("Currency", currency_opts)
 
         submitted = st.form_submit_button("Add Operations", type="primary")
         if submitted:
@@ -92,9 +108,10 @@ def main():
                 st.write(f"**Directive:** {rec['directive']}")
                 st.write(f"**Lead Time:** {rec['lead_time']} d")
                 st.write(f"**Sub-supplier used:** {rec['subsupplier_used']}")
-                st.write(
-                    f"**Sub-supplier box days:** {rec['subsupplier_box_days']} d"
-                )
+                if rec['subsupplier_used'] == 'Yes':
+                    st.write(
+                        f"**Sub-supplier box days:** {rec['subsupplier_box_days']} d"
+                    )
                 st.write(f"**Packaging Tool Owner:** {rec['packaging_tool_owner']}")
                 st.write(f"**Responsible:** {rec['responsible']}")
             with col2:
@@ -141,21 +158,36 @@ def main():
                         "Sub-supplier used", yes_no,
                         index=yes_no.index(rec["subsupplier_used"])
                     )
-                    new_subsupplier_box_days = st.number_input(
-                        "Sub-supplier need for boxes (days)",
-                        value=rec["subsupplier_box_days"], min_value=0, step=1
-                    )
+                    
+                    # Show sub-supplier box days only if sub-supplier is used
+                    if new_subsupplier_used == "Yes":
+                        new_subsupplier_box_days = st.number_input(
+                            "Sub-supplier need for boxes (days)",
+                            value=rec["subsupplier_box_days"], min_value=0, step=1
+                        )
+                    else:
+                        new_subsupplier_box_days = 0
+                    
                     new_packaging_tool_owner = st.selectbox(
                         "Packaging Tool Ownership", ownership_options,
-                        index=ownership_options.index(rec["packaging_tool_owner"])
+                        index=ownership_options.index(rec["packaging_tool_owner"]) if rec["packaging_tool_owner"] in ownership_options else 0
                     )
-                    new_responsible = st.selectbox(
-                        "Responsible", responsible_opts,
-                        index=responsible_opts.index(rec["responsible"])
-                    )
+                    
+                    # Show responsible as required only if sub-supplier is used
+                    if new_subsupplier_used == "Yes":
+                        new_responsible = st.selectbox(
+                            "Responsible *", responsible_opts,
+                            index=responsible_opts.index(rec["responsible"]) if rec["responsible"] in responsible_opts else 0
+                        )
+                    else:
+                        new_responsible = st.selectbox(
+                            "Responsible", responsible_opts,
+                            index=responsible_opts.index(rec["responsible"]) if rec["responsible"] in responsible_opts else 0
+                        )
+                    
                     new_currency = st.selectbox(
                         "Currency", currency_opts,
-                        index=currency_opts.index(rec["currency"])
+                        index=currency_opts.index(rec["currency"]) if rec["currency"] in currency_opts else 0
                     )
 
                 col1, col2 = st.columns(2)

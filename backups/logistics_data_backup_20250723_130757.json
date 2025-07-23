@@ -1,32 +1,6 @@
 {
-  "materials": [
-    {
-      "project_name": "EPS",
-      "material_no": "K297402",
-      "material_desc": "Last Chance Filter",
-      "weight_per_pcs": 0.004,
-      "usage": "4.0",
-      "daily_demand": 800.0,
-      "annual_volume": 200000,
-      "lifetime_volume": 2000000.0,
-      "peak_year": "",
-      "peak_year_volume": 200000,
-      "working_days": 250,
-      "sop": "2026",
-      "Pcs_Price": 0.0
-    }
-  ],
-  "suppliers": [
-    {
-      "vendor_id": "903000",
-      "vendor_name": "Keller & Kalmbach",
-      "vendor_country": "DE",
-      "city_of_manufacture": "Unterschleissheim",
-      "vendor_zip": "85716",
-      "delivery_performance": 0.0,
-      "deliveries_per_month": 2
-    }
-  ],
+  "materials": [],
+  "suppliers": [],
   "locations": [
     {
       "plant": "Aldersbach",
@@ -84,9 +58,9 @@
   ],
   "repacking": [
     {
-      "pcs_weight": "light\n(up to 0,050kg)",
-      "packaging_one_way": "one-way tray in cardboard/wooden box",
-      "packaging_returnable": "returnable trays"
+      "pcs_weight": "None",
+      "packaging_one_way": "N/A",
+      "packaging_returnable": "N/A"
     }
   ],
   "customs": [
@@ -95,18 +69,13 @@
       "hs_code": "A",
       "duty_rate": 0.0,
       "tariff_rate": 0.0
-    }
-  ],
-  "transport": [
+    },
     {
-      "mode1": "Road",
-      "mode2": "None",
-      "cost_lu": 95.59,
-      "cost_bonded": 0.0,
-      "stack_factor": "2",
-      "key": "Road-None"
+      "pref_usage": "Yes",
+      "duty_rate": 0.0
     }
   ],
+  "transport": [],
   "co2": [
     {
       "cost_per_ton": 100.0,
@@ -128,7 +97,7 @@
     "auto_save": true
   },
   "metadata": {
-    "save_timestamp": "2025-06-30T08:36:25.788678",
+    "save_timestamp": "2025-07-23T13:07:54.027194",
     "version": "1.0.0"
   }
 }

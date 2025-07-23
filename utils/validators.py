@@ -237,15 +237,16 @@ class LocationValidator(BaseValidator):
 
 
 class OperationsValidator(BaseValidator):
-    """Validator for operations information - matching 4_Operations_Information.py"""
+    """Validator for operations information - matching updated 4_Operations_Information.py"""
     
     def validate_operations(self, operations_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Validate operations data and return validation result.
+        Updated to make certain fields optional based on requirements.
         """
         errors = []
         
-        # Required fields from 4_Operations_Information.py
+        # Required fields
         incoterm_code = operations_data.get('incoterm_code', '').strip()
         if self.is_empty_or_none(incoterm_code):
             errors.append("Incoterm Code is required")
@@ -264,9 +265,11 @@ class OperationsValidator(BaseValidator):
         if self.is_empty_or_none(calloff_type):
             errors.append("Call-off Transfer Type is required")
         
+        # Directive is now OPTIONAL - no validation required
         directive = operations_data.get('directive', '').strip()
-        if self.is_empty_or_none(directive):
-            errors.append("Logistics Directive version is required")
+        # Only validate format if provided
+        if directive and directive not in ['Yes', 'No']:
+            errors.append("Logistics Directive must be Yes or No if provided")
         
         lead_time = operations_data.get('lead_time')
         if lead_time is None:
@@ -282,30 +285,38 @@ class OperationsValidator(BaseValidator):
         elif subsupplier_used not in ['Yes', 'No']:
             errors.append("Sub-supplier used must be Yes or No")
         
+        # Packaging Tool Ownership is now OPTIONAL - no validation required
         packaging_tool_owner = operations_data.get('packaging_tool_owner', '').strip()
-        if self.is_empty_or_none(packaging_tool_owner):
-            errors.append("Packaging Tool Ownership is required")
+        # Only validate format if provided
+        if packaging_tool_owner and len(packaging_tool_owner) > 50:
+            errors.append("Packaging Tool Ownership must be 50 characters or less")
         
+        # Responsible is REQUIRED only if sub-supplier is used
         responsible = operations_data.get('responsible', '').strip()
-        if self.is_empty_or_none(responsible):
-            errors.append("Responsible party is required")
+        if subsupplier_used == 'Yes' and self.is_empty_or_none(responsible):
+            errors.append("Responsible party is required when sub-supplier is used")
+        # Validate format if provided
+        elif responsible and len(responsible) > 50:
+            errors.append("Responsible party must be 50 characters or less")
         
+        # Currency is now OPTIONAL - no validation required
         currency = operations_data.get('currency', '').strip()
-        if self.is_empty_or_none(currency):
-            errors.append("Currency is required")
-        elif len(currency) > 3:
+        # Only validate format if provided
+        if currency and len(currency) > 3:
             errors.append("Currency code must be 3 characters or less")
         
-        # Optional field
+        # Sub-supplier box days - only validate if sub-supplier is used
         subsupplier_box_days = operations_data.get('subsupplier_box_days')
-        if subsupplier_box_days is not None and not self.is_positive_integer(subsupplier_box_days, allow_zero=True):
-            errors.append("Sub-supplier box days must be a non-negative integer")
+        if subsupplier_used == 'Yes' and subsupplier_box_days is not None:
+            if not self.is_positive_integer(subsupplier_box_days, allow_zero=True):
+                errors.append("Sub-supplier box days must be a non-negative integer")
+            elif subsupplier_box_days > 365:
+                errors.append("Sub-supplier box days seems unreasonably high (max 365 days)")
         
         return {
             'is_valid': len(errors) == 0,
             'errors': errors
         }
-
 
 class PackagingValidator(BaseValidator):
     """Validator for packaging configuration - matching 6_Packaging_Cost.py"""
@@ -458,41 +469,22 @@ class RepackingValidator(BaseValidator):
 
 class CustomsValidator(BaseValidator):
     """Validator for customs configuration - matching 8_Customs_Cost.py"""
-    
     def validate_customs(self, customs_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Validate customs data and return validation result.
-        """
         errors = []
-        
         pref_usage = customs_data.get('pref_usage', '').strip()
-        if self.is_empty_or_none(pref_usage):
+        if not pref_usage:
             errors.append("Customs Preference Usage is required")
         elif pref_usage not in ['Yes', 'No']:
             errors.append("Customs Preference Usage must be Yes or No")
-        
-        hs_code = customs_data.get('hs_code', '').strip()
-        if self.is_empty_or_none(hs_code):
-            errors.append("HS Code is required")
-        elif len(hs_code) > 20:
-            errors.append("HS Code must be 20 characters or less")
-        
-        duty_rate = customs_data.get('duty_rate')
-        if duty_rate is None:
-            errors.append("Duty Rate is required")
-        elif not self.is_valid_percentage(duty_rate):
-            errors.append("Duty Rate must be between 0 and 100 percent")
-        
-        tariff_rate = customs_data.get('tariff_rate')
-        if tariff_rate is None:
-            errors.append("Tariff Rate is required")
-        elif not self.is_valid_percentage(tariff_rate):
-            errors.append("Tariff Rate must be between 0 and 100 percent")
-        
-        return {
-            'is_valid': len(errors) == 0,
-            'errors': errors
-        }
+
+        # Duty rate only required when preference not used
+        if pref_usage == 'No':
+            duty_rate = customs_data.get('duty_rate')
+            if duty_rate is None:
+                errors.append("Duty Rate is required when no preference is used")
+            elif not self.is_valid_percentage(duty_rate):
+                errors.append("Duty Rate must be between 0 and 100 percent")
+        return {'is_valid': len(errors) == 0, 'errors': errors}
 
 
 class TransportValidator(BaseValidator):
@@ -509,21 +501,11 @@ class TransportValidator(BaseValidator):
         if self.is_empty_or_none(mode1):
             errors.append("Transportation Mode I is required")
         
-        mode2 = transport_data.get('mode2', '').strip()
-        if self.is_empty_or_none(mode2):
-            errors.append("Transportation Mode II is required")
-        
         cost_lu = transport_data.get('cost_lu')
         if cost_lu is None:
             errors.append("Transportation Cost per LU is required")
         elif not self.is_positive_number(cost_lu, allow_zero=True):
             errors.append("Transportation Cost per LU must be a non-negative number")
-        
-        cost_bonded = transport_data.get('cost_bonded')
-        if cost_bonded is None:
-            errors.append("Transportation Cost (Bonded Warehouse) per LU is required")
-        elif not self.is_positive_number(cost_bonded, allow_zero=True):
-            errors.append("Transportation Cost (Bonded) per LU must be a non-negative number")
         
         stack_factor = transport_data.get('stack_factor', '').strip()
         if self.is_empty_or_none(stack_factor):

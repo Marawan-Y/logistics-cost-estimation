@@ -1,0 +1,83 @@
+{
+  "materials": [],
+  "suppliers": [],
+  "locations": [],
+  "operations": [],
+  "packaging": [
+    {
+      "pack_maint": 45.13,
+      "empties_scrap": 0.0,
+      "box_type": "KLT4314 / LID",
+      "fill_qty_box": 1400,
+      "pallet_type": "EURO Pallet Price",
+      "fill_qty_lu_oversea": 0,
+      "add_pack_price": 10.0,
+      "sp_needed": "No",
+      "sp_type": "Standalone tray",
+      "fill_qty_tray": 12,
+      "tooling_cost": 750.0,
+      "add_sp_pack": "No",
+      "trays_per_sp_pal": 16,
+      "sp_pallets_per_lu": 4,
+      "loop_data": {
+        "goods receipt": 1,
+        "stock raw materials": 4,
+        "production": 3,
+        "empties return": 3,
+        "cleaning": 2,
+        "dispatch": 1,
+        "empties transit (KB → Supplier)": 1,
+        "empties receipt (at Supplier)": 1,
+        "empties in stock (Supplier)": 2,
+        "production (contrary loop)": 5,
+        "stock finished parts": 5,
+        "dispatch (finished parts)": 1,
+        "transit (Supplier → KB)": 1
+      }
+    }
+  ],
+  "repacking": [
+    {
+      "pcs_weight": "None",
+      "packaging_one_way": "N/A",
+      "packaging_returnable": "N/A"
+    }
+  ],
+  "customs": [
+    {
+      "pref_usage": "Yes",
+      "hs_code": "A",
+      "duty_rate": 0.0,
+      "tariff_rate": 0.0
+    },
+    {
+      "pref_usage": "Yes",
+      "duty_rate": 0.0
+    }
+  ],
+  "transport": [],
+  "co2": [
+    {
+      "cost_per_ton": 100.0,
+      "co2_conversion_factor": "3.17"
+    }
+  ],
+  "warehouse": [
+    {
+      "cost_per_loc": 5.0
+    }
+  ],
+  "interest": [
+    {
+      "rate": 0.0
+    }
+  ],
+  "additional_costs": [],
+  "settings": {
+    "auto_save": true
+  },
+  "metadata": {
+    "save_timestamp": "2025-07-23T13:08:02.771660",
+    "version": "1.0.0"
+  }
+}
