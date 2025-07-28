@@ -409,38 +409,122 @@ class LogisticsCostCalculator:
 
         return pallets_per_delivery
     
-    def transport_cost_per_piece(self, transport_config, packaging_config, operations_config, location_config=None):
+    def transport_cost_per_piece(
+        self,
+        transport_config,
+        packaging_config,
+        operations_config,
+        location_config=None,
+        material=None,
+        supplier=None
+    ):
         """
         X4 = transport cost per piece
+        Now supports automatic calculation from transport database
         """
         try:
-            mode1 = transport_config.get('mode1', 'Road')
-            cost_lu = transport_config.get('cost_lu', 0)
-            cost_bonded = transport_config.get('cost_bonded', 0)
-            
-            # Use fill_qty_lu_oversea from packaging config
-            fill_qty_lu_oversea = packaging_config.get('fill_qty_lu_oversea', 1)
-            if fill_qty_lu_oversea <= 0:
-                fill_qty_lu_oversea = 1
-            
-            # Get incoterm from operations config
-            incoterm_code = operations_config.get('incoterm_code', '') if operations_config else ''
-            
-            # Standard fill qty per LU
-            fill_qty_lu = self.filling_qty_pcs_per_lu(packaging_config)
-            if fill_qty_lu <= 0:
-                fill_qty_lu = 1
+            # Check if we should use automatic calculation
+            if transport_config.get('auto_calculate', False):
+                # Need supplier and material information
+                if not supplier or not material:
+                    self.calculation_errors.append(
+                        "Supplier and material info required for automatic transport calculation"
+                    )
+                    return 0.0
 
-            if mode1 == 'Sea':
-                if incoterm_code in ['FCA', 'FOB']:
-                    tp_per_piece = (cost_lu / fill_qty_lu_oversea) + (cost_bonded / fill_qty_lu)
+                # Load or retrieve transport database
+                import streamlit as st
+                if 'transport_db' in st.session_state:
+                    transport_db = st.session_state.transport_db
                 else:
-                    tp_per_piece = cost_lu / fill_qty_lu_oversea
-            else:
-                tp_per_piece = cost_lu / fill_qty_lu
+                    from utils.transport_database import TransportDatabase
+                    transport_db = TransportDatabase()
+                    try:
+                        transport_db.load_from_json(str(self.get_transport_database_path()))
+                    except:
+                        self.calculation_errors.append(
+                            "Transport database not available for automatic calculation"
+                        )
+                        return 0.0
 
-            return max(0.0, tp_per_piece)
-        
+                # Calculate shipment parameters
+                daily_demand = material.get('daily_demand', 0)
+                deliveries_per_month = supplier.get('deliveries_per_month', 1)
+                weight_per_piece = material.get('weight_per_pcs', 0)
+
+                pieces_per_delivery = (
+                    (daily_demand * 20) / deliveries_per_month
+                    if deliveries_per_month > 0 else daily_demand * 20
+                )
+                weight_per_delivery = pieces_per_delivery * weight_per_piece
+
+                # Pallet / LU calculations
+                fill_qty_lu = self.filling_qty_pcs_per_lu(packaging_config)
+                num_pallets = (
+                    math.ceil(pieces_per_delivery / fill_qty_lu)
+                    if fill_qty_lu > 0 else 1
+                )
+
+                # Loading meters
+                stack_factor = float(transport_config.get('stack_factor', '1'))
+                loading_meters_per_pallet = 0.4  # 0.96m^2 / 2.4m
+                total_loading_meters = loading_meters_per_pallet * math.ceil(num_pallets / stack_factor)
+
+                # Destination
+                dest_country = location_config.get('country', 'DE') if location_config else 'DE'
+                dest_zip = '94'  # Aldersbach
+
+                # Query database
+                from utils.transport_database import calculate_transport_cost_from_database
+                result = calculate_transport_cost_from_database(
+                    supplier_country=supplier.get('vendor_country', ''),
+                    supplier_zip=supplier.get('vendor_zip', ''),
+                    dest_country=dest_country,
+                    dest_zip=dest_zip,
+                    weight_kg=weight_per_delivery,
+                    num_pallets=num_pallets,
+                    loading_meters=total_loading_meters,
+                    transport_db=transport_db
+                )
+
+                if result:
+                    cost_per_lu = result['cost_per_pallet']
+                    # Bonded warehouse surcharge
+                    if transport_config.get('use_bonded_warehouse', False):
+                        mode1 = transport_config.get('mode1', 'Road')
+                        incoterm_code = operations_config.get('incoterm_code', '') if operations_config else ''
+                        if mode1 == 'Sea' and incoterm_code in ['FCA', 'FOB']:
+                            cost_per_lu += 50.0
+
+                    tp_per_piece = (
+                        cost_per_lu / fill_qty_lu
+                        if fill_qty_lu > 0 else cost_per_lu
+                    )
+                    return max(0.0, tp_per_piece)
+                else:
+                    self.calculation_errors.append(
+                        f"Transport lane not found: {supplier.get('vendor_country', '')} "
+                        f"{supplier.get('vendor_zip', '')} → {dest_country} {dest_zip}"
+                    )
+                    return 0.0
+            else:
+                # Legacy manual calculation
+                mode1 = transport_config.get('mode1', 'Road')
+                cost_lu = transport_config.get('cost_lu', 0)
+                cost_bonded = transport_config.get('cost_bonded', 0)
+                fill_qty_lu_oversea = packaging_config.get('fill_qty_lu_oversea', 1) or 1
+                incoterm_code = operations_config.get('incoterm_code', '') if operations_config else ''
+                fill_qty_lu = self.filling_qty_pcs_per_lu(packaging_config) or 1
+
+                if mode1 == 'Sea':
+                    if incoterm_code in ['FCA', 'FOB']:
+                        tp_per_piece = (cost_lu / fill_qty_lu_oversea) + (cost_bonded / fill_qty_lu)
+                    else:
+                        tp_per_piece = cost_lu / fill_qty_lu_oversea
+                else:
+                    tp_per_piece = cost_lu / fill_qty_lu
+
+                return max(0.0, tp_per_piece)
         except Exception as e:
             self.calculation_errors.append(f"Transport cost error: {e}")
             return 0.0
@@ -781,35 +865,55 @@ class LogisticsCostCalculator:
             return 0
 
     # --- Total cost aggregation ----------------
-    def calculate_total_logistics_cost(self, material, supplier, packaging_config, transport_config, 
-                                     warehouse_config, repacking_config, customs_config, co2_config,
-                                     additional_costs=None, operations_config=None, location_config=None,
-                                     inventory_config=None):
+    def calculate_total_logistics_cost(
+        self,
+        material,
+        supplier,
+        packaging_config,
+        transport_config,
+        warehouse_config,
+        repacking_config,
+        customs_config,
+        co2_config,
+        additional_costs=None,
+        operations_config=None,
+        location_config=None,
+        inventory_config=None
+    ):
         """
-        Calculate total logistics cost per piece for a specific material-supplier combination.
+        Calculate total logistics cost per piece for a material-supplier combination.
         """
         try:
-            # Calculate individual cost components
             packaging_cost = self.packaging_cost_per_piece(material, packaging_config, operations_config)
             repacking_cost = self.get_repacking_cost_value(repacking_config)
-            customs_cost = self.customs_cost_per_piece(material, customs_config, transport_config, packaging_config, operations_config)
-            transport_cost = self.transport_cost_per_piece(transport_config, packaging_config, operations_config, location_config)
-            co2_cost = self.co2_cost_per_piece(material, transport_config, packaging_config, location_config, co2_config)
-            warehouse_cost = self.warehouse_cost_per_piece(material, warehouse_config, packaging_config, operations_config)
-            additional_cost = self.additional_costs_per_piece(material, additional_costs)
-            
-            # Total cost per piece
-            total_cost_per_piece = (
-                packaging_cost + 
-                repacking_cost + 
-                customs_cost + 
-                transport_cost + 
-                warehouse_cost + 
-                additional_cost +
-                co2_cost
+            customs_cost = self.customs_cost_per_piece(
+                material, customs_config, transport_config, packaging_config, operations_config
             )
-            
-            # Calculate annual cost
+            transport_cost = self.transport_cost_per_piece(
+                transport_config,
+                packaging_config,
+                operations_config,
+                location_config=location_config,
+                material=material,
+                supplier=supplier
+            )
+            co2_cost = self.co2_cost_per_piece(
+                material, transport_config, packaging_config, location_config, co2_config
+            )
+            warehouse_cost = self.warehouse_cost_per_piece(
+                material, warehouse_config, packaging_config, operations_config
+            )
+            additional_cost = self.additional_costs_per_piece(material, additional_costs)
+
+            total_cost_per_piece = (
+                packaging_cost
+                + repacking_cost
+                + customs_cost
+                + transport_cost
+                + warehouse_cost
+                + additional_cost
+                + co2_cost
+            )
             annual_volume = material.get('annual_volume', 0)
             total_annual_cost = total_cost_per_piece * annual_volume
             

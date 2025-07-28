@@ -1,0 +1,21 @@
+{
+  "materials": [],
+  "suppliers": [],
+  "locations": [],
+  "operations": [],
+  "packaging": [],
+  "repacking": [],
+  "customs": [],
+  "transport": [],
+  "co2": [],
+  "warehouse": [],
+  "interest": [],
+  "additional_costs": [],
+  "settings": {
+    "auto_save": true
+  },
+  "metadata": {
+    "save_timestamp": "2025-07-24T12:47:21.401140",
+    "version": "1.0.0"
+  }
+}

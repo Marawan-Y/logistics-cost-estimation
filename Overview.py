@@ -115,33 +115,33 @@ def main():
     # Display save status in sidebar
     display_save_status()
 
-    # Sidebar navigation info
-    st.sidebar.title("📋 Navigation Guide")
-    st.sidebar.markdown("""
-    ### Configuration Pages:
+    # # Sidebar navigation info
+    # st.sidebar.title("📋 Navigation Guide")
+    # st.sidebar.markdown("""
+    # ### Configuration Pages:
     
-    **Basic Setup:**
-    1. **Material Information** - Product specifications
-    2. **Supplier Information** - Vendor details
-    3. **KB/Bendix Location** - Plant locations
-    4. **Operations Information** - Business parameters
+    # **Basic Setup:**
+    # 1. **Material Information** - Product specifications
+    # 2. **Supplier Information** - Vendor details
+    # 3. **KB/Bendix Location** - Plant locations
+    # 4. **Operations Information** - Business parameters
     
-    **Cost Components:**
-    5. **Packaging Cost** - Container & packaging setup
-    6. **Repacking Cost** - Material handling costs
-    7. **Customs Cost** - Import/export duties
-    8. **Transport Cost** - Shipping & logistics
-    9. **Annual CO₂ Cost** - Environmental costs
-    10. **Warehouse Cost** - Storage expenses
-    11. **Inventory Cost** - Interest rates
-    12. **Additional Cost** - Other expenses
+    # **Cost Components:**
+    # 5. **Packaging Cost** - Container & packaging setup
+    # 6. **Repacking Cost** - Material handling costs
+    # 7. **Customs Cost** - Import/export duties
+    # 8. **Transport Cost** - Shipping & logistics
+    # 9. **Annual CO₂ Cost** - Environmental costs
+    # 10. **Warehouse Cost** - Storage expenses
+    # 11. **Inventory Cost** - Interest rates
+    # 12. **Additional Cost** - Other expenses
     
-    **Analysis:**
-    13. **Cost Calculation** - Run calculations & export
+    # **Analysis:**
+    # 13. **Cost Calculation** - Run calculations & export
     
-    **Settings:**
-    14. **Settings** - Configure auto-save and data management
-    """)
+    # **Settings:**
+    # 14. **Settings** - Configure auto-save and data management
+    # """)
 
     # Main dashboard
     data_manager = st.session_state.data_manager

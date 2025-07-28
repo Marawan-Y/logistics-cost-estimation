@@ -546,7 +546,42 @@ class DataManager:
             return True
         except Exception:
             return False
-    
+
+    def get_transport_database_path(self) -> Path:
+        """Get the path for transport database file"""
+        return Path("transport_database.json")
+
+    def has_transport_database(self) -> bool:
+        """Check if transport database exists"""
+        return self.get_transport_database_path().exists()
+
+    def get_transport_database_stats(self) -> Dict[str, Any]:
+        """Get statistics about the transport database"""
+        try:
+            from utils.transport_database import TransportDatabase
+            db = TransportDatabase()
+            db.load_from_json(str(self.get_transport_database_path()))
+            return db.get_statistics()
+        except Exception:
+            return {
+                'total_lanes': 0,
+                'weight_clusters': 0,
+                'countries': [],
+                'exists': False
+            }
+
+    def backup_transport_database(self) -> bool:
+        """Create backup of transport database"""
+        try:
+            db_path = self.get_transport_database_path()
+            if db_path.exists():
+                backup_file = self.backup_dir / f"transport_database_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                import shutil
+                shutil.copy2(db_path, backup_file)
+                return True
+        except Exception:
+            return False
+
     # CO2 management
     def add_co2(self, co2_data: Dict[str, Any]) -> bool:
         """Add CO2 configuration."""

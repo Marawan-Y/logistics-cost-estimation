@@ -1,125 +1,172 @@
-# pages/8_Customs_Cost.py
+# pages/7_Repacking_Cost.py
 import streamlit as st
-from utils.validators import CustomsValidator
+from utils.validators import RepackingValidator
 from utils.data_manager import DataManager
 
-st.set_page_config(page_title="Customs Cost", page_icon="🛃")
+st.set_page_config(page_title="Repacking Cost", page_icon="🔄")
 
 def main():
-    st.title("Customs Cost")
-    st.markdown("Configure customs-related cost parameters")
+    st.title("Repacking Cost")
+    st.markdown("Configure repacking parameters")
     st.markdown("---")
 
-    # Initialize DataManager & Validator
     if 'data_manager' not in st.session_state:
         st.session_state.data_manager = DataManager()
     dm = st.session_state.data_manager
-    val = CustomsValidator()
+    val = RepackingValidator()
 
-    # Preference selector outside form for instant effect
-    pref_usage = st.selectbox(
-        "Customs Preference Usage (Y/N) *",
-        ["Yes", "No"],
-        help="Whether customs preference is used",
-        key="cust_pref_usage"
-    )
+    # New parameter options
+    weight_options = [
+        "None",
+        "light\n(up to 0,050kg)",
+        "moderate\n(up to 0,150kg)",
+        "heavy\n(from 0,150kg)"
+    ]
+    packaging_one_way_options = [
+        "N/A",
+        "one-way tray in cardboard/wooden box",
+        "Bulk (poss. in bag) in cardboard/wooden box",
+        "Einwegblister im Karton/Holzkiste"
+    ]
+    packaging_returnable_options = [
+        "N/A",
+        "returnable trays",
+        "one-way tray in KLT",
+        "KLT"
+    ]
 
-    # ---------- Add New Customs Cost ----------
-    with st.form("customs_form"):
-        st.subheader("Add New Customs Cost")
-        if pref_usage == "No":
-            duty_rate = st.number_input(
-                "Duty Rate (% of pcs price) *",
-                min_value=0.0, max_value=100.0,
-                step=0.01, format="%.2f",
-                help="Duty rate as a percentage of piece price"
+    # ---------------- Add New Repacking Record ----------------
+    with st.form("rep_form"):
+        st.subheader("Add New Repacking Record")
+        # Use three columns to lay out three selectboxes
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            pcs_weight = st.selectbox(
+                "Weight (pcs_weight)",
+                weight_options,
+                help="Select weight category"
             )
-        else:
-            duty_rate = 0.0
-            st.write("Duty rate not required when preference is Yes.")
+        with col2:
+            packaging_one_way = st.selectbox(
+                "Packaging one-way (supplier)",
+                packaging_one_way_options,
+                help="Select one-way packaging"
+            )
+        with col3:
+            packaging_returnable = st.selectbox(
+                "Packaging returnable (KB)",
+                packaging_returnable_options,
+                help="Select returnable packaging"
+            )
 
-        submitted = st.form_submit_button("Add Customs Cost", type="primary")
+        submitted = st.form_submit_button("Add Repacking Record", type="primary")
         if submitted:
-            obj = {"pref_usage": pref_usage, "duty_rate": duty_rate}
-            res = val.validate_customs(obj)
+            obj = {
+                "pcs_weight": pcs_weight,
+                "packaging_one_way": packaging_one_way,
+                "packaging_returnable": packaging_returnable
+            }
+            res = val.validate_repacking(obj)
             if res["is_valid"]:
-                dm.add_customs(obj)
-                st.success("Customs cost added successfully!")
+                dm.add_repacking(obj)
+                st.success("Repacking record added successfully!")
                 st.rerun()
             else:
                 for e in res["errors"]:
                     st.error(e)
 
     st.markdown("---")
-    # ---------- Display Existing Customs Costs ----------
-    st.subheader("Existing Customs Costs")
-    customs_list = dm.get_customs()
-    if not customs_list:
-        st.info("No customs costs configured yet.")
 
-    # Callbacks to manage edit flags
-    def enter_edit(idx):
-        st.session_state[f"edit_cust_{idx}"] = True
+    # ---------------- Display Existing Repacking Records ----------------
+    st.subheader("Existing Repacking Records")
+    rep_list = dm.get_repacking()
+    if not rep_list:
+        st.info("No repacking records configured yet.")
 
-    def exit_edit(idx):
-        st.session_state[f"edit_cust_{idx}"] = False
+    # Initialize edit flags if not present
+    for i, _ in enumerate(rep_list):
+        flag = f"edit_rep_{i}"
+        if flag not in st.session_state:
+            st.session_state[flag] = False
 
-    # Display entries
-    for i, cust in enumerate(customs_list):
-        flag_key = f"edit_cust_{i}"
-        if flag_key not in st.session_state:
-            st.session_state[flag_key] = False
-
-        with st.expander(f"Preference: {cust['pref_usage']}"):
-            st.write(f"**Duty Rate:** {cust['duty_rate']:.2f}%")
-            col1, col2 = st.columns([3, 1])
+    for i, rp in enumerate(rep_list):
+        # Header shows key fields
+        header = f"{rp.get('pcs_weight', '')} | {rp.get('packaging_one_way', '')} | {rp.get('packaging_returnable', '')}"
+        with st.expander(header):
+            col1, col2, col3 = st.columns([3, 1, 1])
             with col1:
-                st.button(
-                    "Edit",
-                    key=f"edit_btn_{i}",
-                    on_click=enter_edit,
-                    args=(i,)
-                )
+                st.write(f"**Weight (pcs_weight):** {rp.get('pcs_weight', '')}")
+                st.write(f"**Packaging one-way (supplier):** {rp.get('packaging_one_way', '')}")
+                st.write(f"**Packaging returnable (KB):** {rp.get('packaging_returnable', '')}")
             with col2:
-                if st.button("Delete", key=f"del_btn_{i}", type="secondary"):
-                    dm.remove_customs(i)
-                    st.success("Customs cost deleted.")
+                if st.button("Edit", key=f"edit_rep_btn_{i}"):
+                    st.session_state[f"edit_rep_{i}"] = True
+                    st.rerun()
+            with col3:
+                if st.button("Delete", key=f"del_rep_{i}", type="secondary"):
+                    dm.remove_repacking(i)
+                    st.success("Repacking record deleted")
                     st.rerun()
 
-    # ---------- Edit Customs Cost ----------
-    for i, cust in enumerate(customs_list):
-        if st.session_state.get(f"edit_cust_{i}", False):
-            with st.form(f"edit_cust_form_{i}"):
-                st.subheader(f"Edit Customs Cost: Preference {cust['pref_usage']}")
-                st.write(f"**Customs Preference Usage:** {cust['pref_usage']}")
-                if cust['pref_usage'] == "No":
-                    new_duty_rate = st.number_input(
-                        "Duty Rate (% of pcs price) *",
-                        value=cust['duty_rate'],
-                        min_value=0.0, max_value=100.0,
-                        step=0.01, format="%.2f",
-                        key=f"edit_duty_rate_{i}"
+    # ---------------- Edit Repacking Record ----------------
+    for i, rp in enumerate(rep_list):
+        if st.session_state.get(f"edit_rep_{i}", False):
+            with st.form(f"edit_rep_form_{i}"):
+                st.subheader(f"Edit Repacking Record")
+                # Three selectboxes, pre-select current values
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    # Determine index of current weight in options
+                    try:
+                        idx_w = weight_options.index(rp.get("pcs_weight", weight_options[0]))
+                    except ValueError:
+                        idx_w = 0
+                    new_pcs_weight = st.selectbox(
+                        "Weight (pcs_weight)",
+                        weight_options,
+                        index=idx_w
                     )
-                else:
-                    new_duty_rate = 0.0
-                    st.write("Duty rate not editable when preference is Yes.")
+                with col2:
+                    try:
+                        idx_ow = packaging_one_way_options.index(rp.get("packaging_one_way", packaging_one_way_options[0]))
+                    except ValueError:
+                        idx_ow = 0
+                    new_packaging_one_way = st.selectbox(
+                        "Packaging one-way (supplier)",
+                        packaging_one_way_options,
+                        index=idx_ow
+                    )
+                with col3:
+                    try:
+                        idx_rt = packaging_returnable_options.index(rp.get("packaging_returnable", packaging_returnable_options[0]))
+                    except ValueError:
+                        idx_rt = 0
+                    new_packaging_returnable = st.selectbox(
+                        "Packaging returnable (KB)",
+                        packaging_returnable_options,
+                        index=idx_rt
+                    )
 
-                col_upd, col_cancel = st.columns(2)
-                with col_upd:
-                    if st.form_submit_button("Update Customs Cost", type="primary"):
-                        upd = {"pref_usage": cust['pref_usage'], "duty_rate": new_duty_rate}
-                        res = val.validate_customs(upd)
+                col1b, col2b = st.columns(2)
+                with col1b:
+                    if st.form_submit_button("Update Repacking", type="primary"):
+                        updated_rp = {
+                            "pcs_weight": new_pcs_weight,
+                            "packaging_one_way": new_packaging_one_way,
+                            "packaging_returnable": new_packaging_returnable
+                        }
+                        res = val.validate_repacking(updated_rp)
                         if res["is_valid"]:
-                            dm.update_customs(i, upd)
-                            st.success("Customs cost updated.")
-                            exit_edit(i)
+                            dm.update_repacking(i, updated_rp)
+                            st.success("Repacking record updated")
+                            st.session_state[f"edit_rep_{i}"] = False
                             st.rerun()
                         else:
                             for e in res["errors"]:
                                 st.error(e)
-                with col_cancel:
+                with col2b:
                     if st.form_submit_button("Cancel"):
-                        exit_edit(i)
+                        st.session_state[f"edit_rep_{i}"] = False
                         st.rerun()
 
 if __name__ == "__main__":
