@@ -14,6 +14,7 @@ import numpy as np
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 import streamlit as st
+import math
 
 class TransportDatabase:
     """
@@ -46,7 +47,7 @@ class TransportDatabase:
         for col in range(14, len(df.columns)):
             value = df.iloc[header_row, col]
             if pd.notna(value) and str(value).startswith("≤"):
-                weight = int(str(value).replace("≤", "").strip())
+                weight = float(str(value).replace("≤", "").strip())
                 self.weight_clusters.append(weight)
             elif self.weight_clusters:  # Stop when we've found all weight clusters
                 break
@@ -113,7 +114,6 @@ class TransportDatabase:
         if pd.isna(value):
             return None
         try:
-            # Remove spaces and convert
             clean_value = str(value).replace(" ", "").replace(",", ".")
             return float(clean_value)
         except:
@@ -124,7 +124,6 @@ class TransportDatabase:
         if pd.isna(value):
             return None
         try:
-            # Remove currency symbol, spaces, and convert
             clean_value = str(value).replace("€", "").replace(" ", "").replace(",", ".")
             return float(clean_value)
         except:
@@ -144,25 +143,16 @@ class TransportDatabase:
         """Build index for faster lane lookup"""
         self.lanes_index = {}
         for entry in self.database:
-            # Create lookup keys
             lane_key = f"{entry['origin']['country']}{entry['origin']['zip_code']}-{entry['destination']['country']}{entry['destination']['zip_code']}"
             self.lanes_index[lane_key] = entry
-            
-            # Also index by lane code
             if entry['lane_code']:
                 self.lanes_index[entry['lane_code']] = entry
     
     def find_lane(self, origin_country: str, origin_zip: str, dest_country: str, dest_zip: str) -> Optional[Dict]:
-        """
-        Find lane entry based on origin and destination.
-        First tries exact match, then tries with 2-digit zip codes.
-        """
-        # Try exact match
         lane_key = f"{origin_country}{origin_zip}-{dest_country}{dest_zip}"
         if lane_key in self.lanes_index:
             return self.lanes_index[lane_key]
         
-        # Try with 2-digit zip codes
         origin_zip_2 = origin_zip[:2] if len(origin_zip) >= 2 else origin_zip
         dest_zip_2 = dest_zip[:2] if len(dest_zip) >= 2 else dest_zip
         lane_key_2 = f"{origin_country}{origin_zip_2}-{dest_country}{dest_zip_2}"
@@ -170,44 +160,24 @@ class TransportDatabase:
         if lane_key_2 in self.lanes_index:
             return self.lanes_index[lane_key_2]
         
-        # Search through all entries for partial match
         for entry in self.database:
             if (entry['origin']['country'] == origin_country and 
                 entry['origin']['zip_code'][:2] == origin_zip_2 and
                 entry['destination']['country'] == dest_country and
                 entry['destination']['zip_code'][:2] == dest_zip_2):
                 return entry
-        
         return None
-    
+
     def calculate_transport_cost(self, weight_kg: float, lane_entry: Dict, 
                                loading_meters: float = None, is_international: bool = False,
                                num_pallets: int = 1) -> Dict:
-        """
-        Calculate transport cost based on carrier pricing rules.
-        
-        Args:
-            weight_kg: Total weight in kg
-            lane_entry: Lane database entry
-            loading_meters: Loading meters (for space-based pricing)
-            is_international: Whether shipment is international
-            num_pallets: Number of pallets
-            
-        Returns:
-            Dictionary with cost details
-        """
-        # Determine if full truck is needed (>34 pallets)
         if num_pallets > 34:
             base_cost = self._parse_full_truck_price(lane_entry.get('full_truck_price', ''))
             extra_pallets = num_pallets - 34
-            
-            # Calculate cost for extra pallets
             extra_weight = weight_kg * (extra_pallets / num_pallets)
             extra_cost = self._get_weight_based_price(extra_weight, lane_entry)
-            
             total_cost = base_cost + extra_cost if base_cost else extra_cost
             cost_per_pallet = total_cost / num_pallets if num_pallets > 0 else 0
-            
             return {
                 'total_cost': total_cost,
                 'cost_per_pallet': cost_per_pallet,
@@ -216,36 +186,25 @@ class TransportDatabase:
                 'extra_pallets_cost': extra_cost
             }
         
-        # Standard calculation - compare weight-based vs space-based
         weight_based_cost = self._get_weight_based_price(weight_kg, lane_entry)
-        
-        # Space-based cost calculation
         space_based_cost = None
         if loading_meters is not None:
             if is_international:
-                # International: 1500 €/loading meter
                 space_based_cost = loading_meters * 1500
             else:
-                # National: 800 €/loading meter
                 space_based_cost = loading_meters * 800
-        
-        # Use the higher cost
         if space_based_cost is not None and space_based_cost > weight_based_cost:
             total_cost = space_based_cost
             cost_type = 'space_based'
         else:
             total_cost = weight_based_cost
             cost_type = 'weight_based'
-        
-        # Apply fuel surcharge if available
         if 'fuel_surcharge' in lane_entry and lane_entry['fuel_surcharge']:
             surcharge = total_cost * (lane_entry['fuel_surcharge'] / 100)
             total_cost += surcharge
         else:
             surcharge = 0
-        
         cost_per_pallet = total_cost / num_pallets if num_pallets > 0 else total_cost
-        
         return {
             'total_cost': total_cost,
             'cost_per_pallet': cost_per_pallet,
@@ -255,40 +214,38 @@ class TransportDatabase:
             'fuel_surcharge': surcharge,
             'weight_cluster_used': self._find_weight_cluster(weight_kg)
         }
-    
+
     def _get_weight_based_price(self, weight_kg: float, lane_entry: Dict) -> float:
-        """Get price based on weight cluster"""
+        # Ensure all keys are float for safe comparison!
+        prices_by_weight = {float(k): v for k, v in lane_entry['prices_by_weight'].items()}
         weight_cluster = self._find_weight_cluster(weight_kg)
-        
-        if weight_cluster in lane_entry['prices_by_weight']:
-            return lane_entry['prices_by_weight'][weight_cluster]
-        
-        # If exact cluster not found, use the highest available
-        available_clusters = sorted(lane_entry['prices_by_weight'].keys())
+        if weight_cluster in prices_by_weight:
+            return prices_by_weight[weight_cluster]
+        available_clusters = sorted(prices_by_weight.keys())
+        for cluster in available_clusters:
+            if weight_kg <= cluster:
+                return prices_by_weight[cluster]
         if available_clusters:
-            return lane_entry['prices_by_weight'][available_clusters[-1]]
-        
+            return prices_by_weight[available_clusters[-1]]
         return 0.0
-    
-    def _find_weight_cluster(self, weight_kg: float) -> int:
-        """Find appropriate weight cluster for given weight"""
-        for cluster in self.weight_clusters:
+
+    def _find_weight_cluster(self, weight_kg: float) -> float:
+        # Ensure all clusters are float
+        sorted_clusters = sorted([float(w) for w in self.weight_clusters])
+        for cluster in sorted_clusters:
             if weight_kg <= cluster:
                 return cluster
-        # If weight exceeds all clusters, return the highest
-        return self.weight_clusters[-1] if self.weight_clusters else 0
-    
+        return sorted_clusters[-1] if sorted_clusters else 0
+
     def _parse_full_truck_price(self, price_str: str) -> float:
-        """Parse full truck price from string"""
         if not price_str or price_str.lower() == 'gem. vereinbarung':
             return 0.0
         try:
             return self._parse_price(price_str) or 0.0
         except:
             return 0.0
-    
+
     def save_to_json(self, file_path: str):
-        """Save database to JSON file"""
         data = {
             'weight_clusters': self.weight_clusters,
             'database': self.database
@@ -297,27 +254,25 @@ class TransportDatabase:
             json.dump(data, f, indent=2, ensure_ascii=False)
     
     def load_from_json(self, file_path: str):
-        """Load database from JSON file"""
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        
-        self.weight_clusters = data['weight_clusters']
+        # Convert clusters to float
+        self.weight_clusters = [float(w) for w in data['weight_clusters']]
         self.database = data['database']
+        # Patch: fix all prices_by_weight keys to float
+        for entry in self.database:
+            entry['prices_by_weight'] = {float(k): v for k, v in entry['prices_by_weight'].items()}
         self._build_lane_index()
     
     def get_all_lanes(self) -> List[Dict]:
-        """Get all lanes in the database"""
         return self.database
     
     def get_statistics(self) -> Dict:
-        """Get database statistics"""
         total_lanes = len(self.database)
         countries = set()
-        
         for entry in self.database:
             countries.add(entry['origin']['country'])
             countries.add(entry['destination']['country'])
-        
         return {
             'total_lanes': total_lanes,
             'weight_clusters': len(self.weight_clusters),
@@ -328,62 +283,121 @@ class TransportDatabase:
     
     def filter_lanes(self, origin_country: str = None, dest_country: str = None, 
                      city: str = None) -> List[Dict]:
-        """Filter lanes based on criteria"""
         filtered = []
-        
         for entry in self.database:
-            # Check origin country
             if origin_country and entry['origin']['country'] != origin_country:
                 continue
-            
-            # Check destination country
             if dest_country and entry['destination']['country'] != dest_country:
                 continue
-            
-            # Check city (in either origin or destination)
             if city:
                 city_lower = city.lower()
                 origin_city = entry['origin']['city'].lower()
                 dest_city = entry['destination']['city'].lower()
                 if city_lower not in origin_city and city_lower not in dest_city:
                     continue
-            
             filtered.append(entry)
-        
         return filtered
 
+    def calculate_transport_cost_workflow(self,
+        material_weight_per_piece: float,  # kg
+        pieces_per_packaging: int,
+        packaging_weight: float,  # kg
+        daily_demand: int,
+        deliveries_per_month: int,
+        packaging_units_per_pallet: int,
+        pallet_weight: float,  # kg (default 25)
+        stackability_factor: float,
+        supplier_country: str,
+        supplier_zip: str,
+        dest_country: str,
+        dest_zip: str
+    ) -> Dict:
+        # STEP 1: Material and Packaging Calculations
+        total_material_weight = material_weight_per_piece * pieces_per_packaging
+        weight_per_packaging_unit = total_material_weight + packaging_weight
+        monthly_demand_per_delivery = (daily_demand * 30) / deliveries_per_month
+        packaging_units_per_delivery = monthly_demand_per_delivery / pieces_per_packaging
 
-# Helper function to integrate with existing transport cost calculation
-def calculate_transport_cost_from_database(
-    supplier_country: str,
-    supplier_zip: str,
-    dest_country: str,
-    dest_zip: str,
-    weight_kg: float,
-    num_pallets: int,
-    loading_meters: float,
-    transport_db: TransportDatabase
-) -> Optional[Dict]:
-    """
-    Calculate transport cost using the database.
-    
-    Returns:
-        Dictionary with cost details or None if lane not found
-    """
-    # Find the lane
-    lane = transport_db.find_lane(supplier_country, supplier_zip, dest_country, dest_zip)
-    
-    if not lane:
-        return None
-    
-    # Determine if international
-    is_international = supplier_country != dest_country
-    
-    # Calculate cost
-    return transport_db.calculate_transport_cost(
-        weight_kg=weight_kg,
-        lane_entry=lane,
-        loading_meters=loading_meters,
-        is_international=is_international,
-        num_pallets=num_pallets
-    )
+        # STEP 2: Logistics Unit (Pallet) Calculations
+        pallets_needed = math.ceil(packaging_units_per_delivery / packaging_units_per_pallet)
+        weight_per_pallet = (packaging_units_per_pallet * weight_per_packaging_unit) + pallet_weight
+        total_shipment_weight = pallets_needed * weight_per_pallet
+        pallet_footprint = 0.4  # meters
+        loading_meters = (pallets_needed / stackability_factor) * pallet_footprint
+
+        # STEP 3: Route Identification
+        lane_code = f"{supplier_country}{supplier_zip}{dest_country}{dest_zip}"
+        lane_entry = self.find_lane(supplier_country, supplier_zip, dest_country, dest_zip)
+        if not lane_entry:
+            return {
+                'success': False,
+                'error': f"No route found for {lane_code}",
+                'calculation_details': {
+                    'monthly_demand_per_delivery': monthly_demand_per_delivery,
+                    'packaging_units_per_delivery': packaging_units_per_delivery,
+                    'pallets_needed': pallets_needed,
+                    'total_shipment_weight': total_shipment_weight
+                }
+            }
+        is_international = supplier_country != dest_country
+        cost_result = self.calculate_transport_cost(
+            weight_kg=total_shipment_weight,
+            lane_entry=lane_entry,
+            loading_meters=loading_meters,
+            is_international=is_international,
+            num_pallets=pallets_needed
+        )
+        price_per_piece = cost_result['total_cost'] / monthly_demand_per_delivery if monthly_demand_per_delivery > 0 else 0
+        return {
+            'success': True,
+            'lane_code': lane_code,
+            'weight_bracket': cost_result.get('weight_cluster_used'),
+            'price_per_delivery': cost_result['total_cost'],
+            'price_per_pallet': cost_result['cost_per_pallet'],
+            'price_per_piece': price_per_piece,
+            'cost_type': cost_result['cost_type'],
+            'fuel_surcharge': cost_result.get('fuel_surcharge', 0),
+            'calculation_details': {
+                # Step 1 results
+                'material_weight_per_piece': material_weight_per_piece,
+                'pieces_per_packaging': pieces_per_packaging,
+                'weight_per_packaging_unit': weight_per_packaging_unit,
+                'monthly_demand_per_delivery': monthly_demand_per_delivery,
+                'packaging_units_per_delivery': packaging_units_per_delivery,
+                # Step 2 results
+                'pallets_needed': pallets_needed,
+                'weight_per_pallet': weight_per_pallet,
+                'total_shipment_weight': total_shipment_weight,
+                'loading_meters': loading_meters,
+                # Step 3 results
+                'route': f"{supplier_country}{supplier_zip} → {dest_country}{dest_zip}",
+                # Step 4 results
+                'weight_bracket_used': cost_result.get('weight_cluster_used'),
+                'base_price': cost_result['total_cost'] - cost_result.get('fuel_surcharge', 0),
+                # Additional details from calculate_transport_cost
+                'weight_based_cost': cost_result.get('weight_based_cost'),
+                'space_based_cost': cost_result.get('space_based_cost')
+            }
+        }
+
+    def calculate_transport_cost_from_database(
+        self,
+        supplier_country: str,
+        supplier_zip: str,
+        dest_country: str,
+        dest_zip: str,
+        weight_kg: float,
+        num_pallets: int,
+        loading_meters: float
+    ) -> Optional[Dict]:
+        lane = self.find_lane(supplier_country, supplier_zip, dest_country, dest_zip)
+        if not lane:
+            return None
+        is_international = supplier_country != dest_country
+        return self.calculate_transport_cost(
+            weight_kg=weight_kg,
+            lane_entry=lane,
+            loading_meters=loading_meters,
+            is_international=is_international,
+            num_pallets=num_pallets
+        )

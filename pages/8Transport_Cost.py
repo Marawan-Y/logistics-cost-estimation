@@ -2,7 +2,7 @@
 import streamlit as st
 from utils.validators import TransportValidator
 from utils.data_manager import DataManager
-from utils.transport_database import TransportDatabase, calculate_transport_cost_from_database
+from utils.transport_database import TransportDatabase
 import uuid
 
 st.set_page_config(page_title="Transport Cost", page_icon="🚚")
@@ -255,56 +255,99 @@ def main():
 
     # Test calculation section
     st.markdown("---")
-    st.subheader("🧪 Test Transport Cost Calculation")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        test_origin_country = st.text_input("Test Origin Country", value="IT")
-        test_origin_zip = st.text_input("Test Origin ZIP", value="23")
-        test_weight = st.number_input("Test Weight (kg)", value=1000.0, min_value=0.0)
-        test_pallets = st.number_input("Test Pallets", value=2, min_value=1)
-    
-    with col2:
-        test_dest_country = st.text_input("Test Destination Country", value="DE")
-        test_dest_zip = st.text_input("Test Destination ZIP", value="94")
-        test_loading_meters = st.number_input("Test Loading Meters", value=0.40, min_value=0.0)
-        test_mode = st.selectbox("Test Mode", transport_modes)
-    
-    if st.button("Calculate Test Cost"):
-        result = calculate_transport_cost_from_database(
-            supplier_country=test_origin_country,
-            supplier_zip=test_origin_zip,
-            dest_country=test_dest_country,
-            dest_zip=test_dest_zip,
-            weight_kg=test_weight,
-            num_pallets=test_pallets,
-            loading_meters=test_loading_meters,
-            transport_db=transport_db
-        )
+    st.subheader("🧪 Test Transport Cost Calculation (5-Step Workflow)")
+
+    with st.form("transport_test_form"):
+        st.markdown("### Step 1: Material and Packaging")
+        col1, col2, col3 = st.columns(3)
         
-        if result:
-            st.success("✅ Calculation successful!")
+        with col1:
+            test_material_weight = st.number_input("Material weight/piece (kg)", value=0.08, step=0.01)
+            test_pieces_per_pkg = st.number_input("Pieces per packaging", value=100, step=1)
+            test_pkg_weight = st.number_input("Packaging weight (kg)", value=1.67, step=0.01)
+        
+        with col2:
+            test_daily_demand = st.number_input("Daily demand", value=800, step=10)
+            test_deliveries = st.number_input("Deliveries/month", value=2, min_value=1)
+        
+        with col3:
+            test_units_per_pallet = st.number_input("Units per pallet", value=48, step=1)
+            test_pallet_weight = st.number_input("Pallet weight (kg)", value=25.0, step=0.1)
+            test_stackability = st.number_input("Stackability factor", value=2.0, min_value=1.0, step=0.1)
+        
+        st.markdown("### Step 3: Route Information")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            test_origin_country = st.text_input("Origin Country", value="IT")
+            test_origin_zip = st.text_input("Origin ZIP (2 digits)", value="23", max_chars=2)
+        
+        with col2:
+            test_dest_country = st.text_input("Destination Country", value="DE")
+            test_dest_zip = st.text_input("Destination ZIP (2 digits)", value="94", max_chars=2)
+        
+        calculate_button = st.form_submit_button("Calculate Transport Cost", type="primary")
+        
+        if calculate_button:
+            # Run the calculation
+            result = transport_db.calculate_transport_cost_workflow(
+                material_weight_per_piece=test_material_weight,
+                pieces_per_packaging=test_pieces_per_pkg,
+                packaging_weight=test_pkg_weight,
+                daily_demand=test_daily_demand,
+                deliveries_per_month=test_deliveries,
+                packaging_units_per_pallet=test_units_per_pallet,
+                pallet_weight=test_pallet_weight,
+                stackability_factor=test_stackability,
+                supplier_country=test_origin_country,
+                supplier_zip=test_origin_zip,
+                dest_country=test_dest_country,
+                dest_zip=test_dest_zip
+            )
             
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("Total Cost", f"€{result['total_cost']:.2f}")
-            with col2:
-                st.metric("Cost per Pallet", f"€{result['cost_per_pallet']:.2f}")
-            with col3:
-                st.metric("Cost Type", result['cost_type'].replace('_', ' ').title())
-            
-            # Show details
-            with st.expander("Calculation Details"):
-                st.write(f"**Weight-based cost**: €{result['weight_based_cost']:.2f}")
-                if result.get('space_based_cost'):
-                    st.write(f"**Space-based cost**: €{result['space_based_cost']:.2f}")
-                if result.get('fuel_surcharge'):
-                    st.write(f"**Fuel surcharge**: €{result['fuel_surcharge']:.2f}")
-                st.write(f"**Weight cluster used**: ≤{result['weight_cluster_used']} kg")
-        else:
-            st.error(f"❌ No lane found for {test_origin_country}{test_origin_zip} → {test_dest_country}{test_dest_zip}")
-            st.info("Please check if this lane exists in the transport database")
+            if result.get('success'):
+                st.success("✅ Calculation completed successfully!")
+                
+                # Display results matching PDF format
+                st.markdown("### 📊 Results")
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.metric("Price per Delivery", f"€{result['price_per_delivery']:.2f}")
+                with col2:
+                    st.metric("Price per Pallet", f"€{result['price_per_pallet']:.2f}")
+                with col3:
+                    st.metric("Price per Piece", f"€{result['price_per_piece']:.3f}")
+                
+                # Detailed breakdown
+                with st.expander("📋 Detailed Calculation Breakdown"):
+                    details = result['calculation_details']
+                    
+                    st.markdown("**Step 1: Material and Packaging Calculations**")
+                    st.write(f"- Weight per packaging unit: {details['weight_per_packaging_unit']:.2f} kg")
+                    st.write(f"- Monthly demand per delivery: {details['monthly_demand_per_delivery']:,.0f} pieces")
+                    st.write(f"- Packaging units per delivery: {details['packaging_units_per_delivery']:.0f}")
+                    
+                    st.markdown("**Step 2: Logistics Unit Calculations**")
+                    st.write(f"- Pallets needed: {details['pallets_needed']}")
+                    st.write(f"- Weight per pallet: {details['weight_per_pallet']:.2f} kg")
+                    st.write(f"- Total shipment weight: {details['total_shipment_weight']:.2f} kg")
+                    st.write(f"- Loading meters: {details['loading_meters']:.2f} m")
+                    
+                    st.markdown("**Step 3: Route Identification**")
+                    st.write(f"- Lane code: {result['lane_code']}")
+                    st.write(f"- Route: {details['route']}")
+                    
+                    st.markdown("**Step 4: Price Lookup**")
+                    st.write(f"- Weight bracket used: ≤{details['weight_bracket_used']} kg")
+                    st.write(f"- Base price: €{details['base_price']:.2f}")
+                    if result.get('fuel_surcharge', 0) > 0:
+                        st.write(f"- Fuel surcharge: €{result['fuel_surcharge']:.2f}")
+                    
+                    st.markdown("**Step 5: Final Calculations**")
+                    st.write(f"- Cost type: {result['cost_type']}")
+            else:
+                st.error(f"❌ {result.get('error', 'Calculation failed')}")
 
 if __name__ == "__main__":
     main()
