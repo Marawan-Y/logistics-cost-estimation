@@ -36,7 +36,7 @@ def main():
         st.subheader("Transport Cost Database")
         
         if len(transport_db.database) > 0:
-            # Convert to DataFrame for display
+            # Convert to DataFrame for display - COMPLETE DATA
             display_data = []
             for entry in transport_db.database:
                 row = {
@@ -48,18 +48,33 @@ def main():
                     'Dest Zip': entry['destination']['zip_code'],
                     'Dest City': entry['destination']['city'],
                     'Lane Code': entry['lane_code'],
-                    'Lead Time': entry['lead_time']['groupage']
+                    'Shipments/Year': entry['statistics']['shipments_per_year'],
+                    'Weight/Year': entry['statistics']['weight_per_year'],
+                    'Avg Shipment': entry['statistics']['avg_shipment_size'],
+                    'Lead Time Groupage': entry['lead_time']['groupage'],
+                    'Lead Time LTL': entry['lead_time']['ltl'],
+                    'Lead Time FTL': entry['lead_time']['ftl']
                 }
                 
-                # Add sample prices
-                weight_samples = [100, 500, 1000, 5000, 10000]
-                for w in weight_samples:
-                    if w in entry['prices_by_weight']:
-                        row[f'Price ≤{w}kg'] = f"€{entry['prices_by_weight'][w]:.2f}"
+                # Add ALL weight cluster prices
+                for weight in sorted(entry['prices_by_weight'].keys()):
+                    row[f'≤{weight}kg'] = f"€{entry['prices_by_weight'][weight]:.2f}"
+                
+                # Add full truck and fuel surcharge
+                row['Full Truck'] = entry.get('full_truck_price', 'N/A')
+                row['Fuel Surcharge'] = f"{entry.get('fuel_surcharge', 0)}%"
                 
                 display_data.append(row)
             
             df_display = pd.DataFrame(display_data)
+            
+            # Add horizontal scrolling for the complete table
+            st.dataframe(
+                df_display,
+                use_container_width=False,  # Allow horizontal scrolling
+                height=600,
+                hide_index=True
+            )
             
             # Add filtering options
             col1, col2, col3 = st.columns(3)

@@ -420,7 +420,7 @@ class LogisticsCostCalculator:
     ):
         """
         X4 = transport cost per piece
-        Now supports automatic calculation from transport database
+        Now supports automatic calculation from transport database using the 5-step workflow
         """
         try:
             # Check if we should use automatic calculation
@@ -437,75 +437,73 @@ class LogisticsCostCalculator:
                 if 'transport_db' in st.session_state:
                     transport_db = st.session_state.transport_db
                 else:
-                    from utils.transport_database import TransportDatabase
+                    from .transport_database import TransportDatabase
                     transport_db = TransportDatabase()
                     try:
-                        transport_db.load_from_json(str(self.get_transport_database_path()))
+                        transport_db.load_from_json('transport_database.json')
                     except:
                         self.calculation_errors.append(
                             "Transport database not available for automatic calculation"
                         )
                         return 0.0
 
-                # Calculate shipment parameters
+                # Gather all required parameters for workflow calculation
+                material_weight = material.get('weight_per_pcs', 0)
+                pieces_per_packaging = packaging_config.get('fill_qty_box', 1)
+                
+                # Get packaging weight from tables
+                box_type = packaging_config.get('box_type', 'None')
+                packaging_weight = STANDARD_BOXES.get(box_type, {}).get("MT_weight_kg", 0)
+                
                 daily_demand = material.get('daily_demand', 0)
                 deliveries_per_month = supplier.get('deliveries_per_month', 1)
-                weight_per_piece = material.get('weight_per_pcs', 0)
-
-                pieces_per_delivery = (
-                    (daily_demand * 20) / deliveries_per_month
-                    if deliveries_per_month > 0 else daily_demand * 20
-                )
-                weight_per_delivery = pieces_per_delivery * weight_per_piece
-
-                # Pallet / LU calculations
-                fill_qty_lu = self.filling_qty_pcs_per_lu(packaging_config)
-                num_pallets = (
-                    math.ceil(pieces_per_delivery / fill_qty_lu)
-                    if fill_qty_lu > 0 else 1
-                )
-
-                # Loading meters
-                stack_factor = float(transport_config.get('stack_factor', '1'))
-                loading_meters_per_pallet = 0.4  # 0.96m^2 / 2.4m
-                total_loading_meters = loading_meters_per_pallet * math.ceil(num_pallets / stack_factor)
-
-                # Destination
+                
+                # Get packaging units per pallet from tables
+                packaging_units_per_pallet = self.no_boxes_per_lu(packaging_config)
+                
+                # Pallet weight (standard Euro pallet)
+                pallet_weight = self.weight_pallet(packaging_config)
+                
+                # Stackability factor
+                stackability_factor = float(transport_config.get('stack_factor', '2'))
+                
+                # Location info
+                supplier_country = supplier.get('vendor_country', '')
+                supplier_zip = supplier.get('vendor_zip', '')[:2]  # First 2 digits
                 dest_country = location_config.get('country', 'DE') if location_config else 'DE'
-                dest_zip = '94'  # Aldersbach
-
-                # Query database
-                from utils.transport_database import calculate_transport_cost_from_database
-                result = calculate_transport_cost_from_database(
-                    supplier_country=supplier.get('vendor_country', ''),
-                    supplier_zip=supplier.get('vendor_zip', ''),
+                dest_zip = '94'  # Aldersbach default
+                
+                # Calculate using the 5-step workflow
+                result = transport_db.calculate_transport_cost_workflow(
+                    material_weight_per_piece=material_weight,
+                    pieces_per_packaging=pieces_per_packaging,
+                    packaging_weight=packaging_weight,
+                    daily_demand=daily_demand,
+                    deliveries_per_month=deliveries_per_month,
+                    packaging_units_per_pallet=packaging_units_per_pallet,
+                    pallet_weight=pallet_weight,
+                    stackability_factor=stackability_factor,
+                    supplier_country=supplier_country,
+                    supplier_zip=supplier_zip,
                     dest_country=dest_country,
-                    dest_zip=dest_zip,
-                    weight_kg=weight_per_delivery,
-                    num_pallets=num_pallets,
-                    loading_meters=total_loading_meters,
-                    transport_db=transport_db
+                    dest_zip=dest_zip
                 )
-
-                if result:
-                    cost_per_lu = result['cost_per_pallet']
-                    # Bonded warehouse surcharge
+                
+                if result.get('success'):
+                    # Handle bonded warehouse if needed
                     if transport_config.get('use_bonded_warehouse', False):
                         mode1 = transport_config.get('mode1', 'Road')
                         incoterm_code = operations_config.get('incoterm_code', '') if operations_config else ''
                         if mode1 == 'Sea' and incoterm_code in ['FCA', 'FOB']:
-                            cost_per_lu += 50.0
-
-                    tp_per_piece = (
-                        cost_per_lu / fill_qty_lu
-                        if fill_qty_lu > 0 else cost_per_lu
-                    )
-                    return max(0.0, tp_per_piece)
+                            # Add bonded warehouse cost per piece
+                            bonded_cost_per_delivery = 50.0  # Example bonded warehouse cost
+                            monthly_demand = result['calculation_details']['monthly_demand_per_delivery']
+                            bonded_cost_per_piece = bonded_cost_per_delivery / monthly_demand if monthly_demand > 0 else 0
+                            return result['price_per_piece'] + bonded_cost_per_piece
+                    
+                    return result['price_per_piece']
                 else:
-                    self.calculation_errors.append(
-                        f"Transport lane not found: {supplier.get('vendor_country', '')} "
-                        f"{supplier.get('vendor_zip', '')} → {dest_country} {dest_zip}"
-                    )
+                    self.calculation_errors.append(result.get('error', 'Transport calculation failed'))
                     return 0.0
             else:
                 # Legacy manual calculation
@@ -528,7 +526,7 @@ class LogisticsCostCalculator:
         except Exception as e:
             self.calculation_errors.append(f"Transport cost error: {e}")
             return 0.0
-
+        
     # --- CO2-level calculations -----------------------------------------
     def energy_consumption(self, transport_config):
         """
@@ -865,320 +863,340 @@ class LogisticsCostCalculator:
             return 0
 
     # --- Total cost aggregation ----------------
+    def additional_costs_per_piece(self, material, additional_costs):
+       """
+       X7 = sum(u_i) / lifetime_volume
+       """
+       try:
+           if not additional_costs:
+               return 0
+           
+           total = sum(c.get('cost_value', 0) for c in (additional_costs or []))
+           lifetime_volume = self.lifetime_volume(material)
+           
+           if lifetime_volume > 0:
+               additional_per_pcs = total / lifetime_volume
+           else:
+               additional_per_pcs = 0
+
+           return max(additional_per_pcs, 0)
+       except Exception as e:
+           self.calculation_errors.append(f"Additional costs error: {e}")
+           return 0
+
+   # --- Total cost aggregation ----------------
     def calculate_total_logistics_cost(
-        self,
-        material,
-        supplier,
-        packaging_config,
-        transport_config,
-        warehouse_config,
-        repacking_config,
-        customs_config,
-        co2_config,
-        additional_costs=None,
-        operations_config=None,
-        location_config=None,
-        inventory_config=None
+       self,
+       material,
+       supplier,
+       packaging_config,
+       transport_config,
+       warehouse_config,
+       repacking_config,
+       customs_config,
+       co2_config,
+       additional_costs=None,
+       operations_config=None,
+       location_config=None,
+       inventory_config=None
     ):
-        """
-        Calculate total logistics cost per piece for a material-supplier combination.
-        """
-        try:
-            packaging_cost = self.packaging_cost_per_piece(material, packaging_config, operations_config)
-            repacking_cost = self.get_repacking_cost_value(repacking_config)
-            customs_cost = self.customs_cost_per_piece(
-                material, customs_config, transport_config, packaging_config, operations_config
-            )
-            transport_cost = self.transport_cost_per_piece(
-                transport_config,
-                packaging_config,
-                operations_config,
-                location_config=location_config,
-                material=material,
-                supplier=supplier
-            )
-            co2_cost = self.co2_cost_per_piece(
-                material, transport_config, packaging_config, location_config, co2_config
-            )
-            warehouse_cost = self.warehouse_cost_per_piece(
-                material, warehouse_config, packaging_config, operations_config
-            )
-            additional_cost = self.additional_costs_per_piece(material, additional_costs)
+       """
+       Calculate total logistics cost per piece for a material-supplier combination.
+       """
+       try:
+           packaging_cost = self.packaging_cost_per_piece(material, packaging_config, operations_config)
+           repacking_cost = self.get_repacking_cost_value(repacking_config)
+           customs_cost = self.customs_cost_per_piece(
+               material, customs_config, transport_config, packaging_config, operations_config
+           )
+           transport_cost = self.transport_cost_per_piece(
+               transport_config,
+               packaging_config,
+               operations_config,
+               location_config=location_config,
+               material=material,
+               supplier=supplier
+           )
+           co2_cost = self.co2_cost_per_piece(
+               material, transport_config, packaging_config, location_config, co2_config
+           )
+           warehouse_cost = self.warehouse_cost_per_piece(
+               material, warehouse_config, packaging_config, operations_config
+           )
+           additional_cost = self.additional_costs_per_piece(material, additional_costs)
 
-            total_cost_per_piece = (
-                packaging_cost
-                + repacking_cost
-                + customs_cost
-                + transport_cost
-                + warehouse_cost
-                + additional_cost
-                + co2_cost
-            )
-            annual_volume = material.get('annual_volume', 0)
-            total_annual_cost = total_cost_per_piece * annual_volume
-            
-            # -- Result List --
-            coc_cost = self.packaging_cost_coc(material, packaging_config, operations_config)
-            plant_cost = self.packaging_cost_plant(material, packaging_config)
-            packaging_cost_total = self.packaging_cost_total(material, packaging_config, operations_config)
-            scrap_wood = self.empties_scrapping_wood(material, packaging_config)
-            p_weight = self.packaging_weight(packaging_config)
-            boxes_per_lu = self.no_boxes_per_lu(packaging_config)
-            pallet_weight = self.weight_pallet(packaging_config)
-            fill_qty_lu = self.filling_qty_pcs_per_lu(packaging_config)
-            sp_fill_qty_pcs_lu = self.SP_Filling_Qty_Pcs_lu(packaging_config)
-            b_price = self.price_per_box(packaging_config)
-            sp_weight = self.sp_packaging_weight(packaging_config)
-            price_tray = self.price_per_tray(packaging_config)
-            sp_pallet_price = self.price_sp_pallets(packaging_config)
-            price_cover = self.price_sp_cover(packaging_config)
-            sp_pallet_weight = self.sp_pallet_weight(packaging_config)
-            pallet_price = self.pallet_price(packaging_config)
+           total_cost_per_piece = (
+               packaging_cost
+               + repacking_cost
+               + customs_cost
+               + transport_cost
+               + warehouse_cost
+               + additional_cost
+               + co2_cost
+           )
+           annual_volume = material.get('annual_volume', 0)
+           total_annual_cost = total_cost_per_piece * annual_volume
+           
+           # -- Result List --
+           coc_cost = self.packaging_cost_coc(material, packaging_config, operations_config)
+           plant_cost = self.packaging_cost_plant(material, packaging_config)
+           packaging_cost_total = self.packaging_cost_total(material, packaging_config, operations_config)
+           scrap_wood = self.empties_scrapping_wood(material, packaging_config)
+           p_weight = self.packaging_weight(packaging_config)
+           boxes_per_lu = self.no_boxes_per_lu(packaging_config)
+           pallet_weight = self.weight_pallet(packaging_config)
+           fill_qty_lu = self.filling_qty_pcs_per_lu(packaging_config)
+           sp_fill_qty_pcs_lu = self.SP_Filling_Qty_Pcs_lu(packaging_config)
+           b_price = self.price_per_box(packaging_config)
+           sp_weight = self.sp_packaging_weight(packaging_config)
+           price_tray = self.price_per_tray(packaging_config)
+           sp_pallet_price = self.price_sp_pallets(packaging_config)
+           price_cover = self.price_sp_cover(packaging_config)
+           sp_pallet_weight = self.sp_pallet_weight(packaging_config)
+           pallet_price = self.pallet_price(packaging_config)
 
-            daily_demand = material.get('daily_demand', 0)
-            loop_plant_days = self.packaging_loop_days(packaging_config)
-            fill_qty_box = max(packaging_config.get('fill_qty_box', 1), 1)
-            b_per_lu = self.no_boxes_per_lu(packaging_config)
-            no_box_loop_plant = math.ceil(((daily_demand * loop_plant_days) / fill_qty_box if fill_qty_box > 0 else 0) / 10) *10
-            no_lu_loop_plant = math.ceil(no_box_loop_plant / b_per_lu if b_per_lu > 0 else 0)
+           daily_demand = material.get('daily_demand', 0)
+           loop_plant_days = self.packaging_loop_days(packaging_config)
+           fill_qty_box = max(packaging_config.get('fill_qty_box', 1), 1)
+           b_per_lu = self.no_boxes_per_lu(packaging_config)
+           no_box_loop_plant = math.ceil(((daily_demand * loop_plant_days) / fill_qty_box if fill_qty_box > 0 else 0) / 10) *10
+           no_lu_loop_plant = math.ceil(no_box_loop_plant / b_per_lu if b_per_lu > 0 else 0)
 
-            subsupplier_days = operations_config.get('subsupplier_box_days', 0)
-            no_box_coc = (daily_demand * subsupplier_days) / fill_qty_box if fill_qty_box > 0 else 0
-            no_lu_coc = no_box_coc / b_per_lu if b_per_lu > 0 else 0
-            fill_tray = max(packaging_config.get('fill_qty_tray', 1), 1)
-            total_pck_loop_days = max(self.total_packaging_loop(packaging_config, operations_config), 1)
-            trays_per_sp_pal = max(packaging_config.get('trays_per_sp_pal', 1), 1)
-            sp_needed = packaging_config.get('sp_needed', 'No')
-            add_sp_pack = packaging_config.get('add_sp_pack', 'No')
-            if sp_needed == 'Yes':
-                no_tray_coc = daily_demand / (fill_tray * total_pck_loop_days) if (fill_tray * total_pck_loop_days) > 0 else 0
-            else:
-                no_tray_coc = 0
-            
-            if add_sp_pack == 'Yes' and trays_per_sp_pal > 0:
-                no_sp_pallet_cover = no_tray_coc / trays_per_sp_pal
-            else:
-                no_sp_pallet_cover = 0
+           subsupplier_days = operations_config.get('subsupplier_box_days', 0) if operations_config else 0
+           no_box_coc = (daily_demand * subsupplier_days) / fill_qty_box if fill_qty_box > 0 else 0
+           no_lu_coc = no_box_coc / b_per_lu if b_per_lu > 0 else 0
+           fill_tray = max(packaging_config.get('fill_qty_tray', 1), 1)
+           total_pck_loop_days = max(self.total_packaging_loop(packaging_config, operations_config), 1)
+           trays_per_sp_pal = max(packaging_config.get('trays_per_sp_pal', 1), 1)
+           sp_needed = packaging_config.get('sp_needed', 'No')
+           add_sp_pack = packaging_config.get('add_sp_pack', 'No')
+           if sp_needed == 'Yes':
+               no_tray_coc = daily_demand / (fill_tray * total_pck_loop_days) if (fill_tray * total_pck_loop_days) > 0 else 0
+           else:
+               no_tray_coc = 0
+           
+           if add_sp_pack == 'Yes' and trays_per_sp_pal > 0:
+               no_sp_pallet_cover = no_tray_coc / trays_per_sp_pal
+           else:
+               no_sp_pallet_cover = 0
 
-            weight_per_lu = self.weight_per_lu(packaging_config, material)
-            emission = self.emission_kg_co2(material, transport_config, packaging_config, location_config, co2_config)
-            total_tons = self.total_tons(material, packaging_config)
+           weight_per_lu = self.weight_per_lu(packaging_config, material)
+           emission = self.emission_kg_co2(material, transport_config, packaging_config, location_config, co2_config)
+           total_tons = self.total_tons(material, packaging_config)
 
-            no_days = self.inventory_days(material, packaging_config)
-            safety_days = self.safety_stock_days(operations_config, packaging_config, material)
-            storage_loc_local = self.storage_locations_local(material, packaging_config)
-            storage_loc_total = self.storage_locations_total(material, packaging_config, operations_config)
-
-
-
-
-            
-            # Build result dictionary
-            result = {
-                # Material
-                'Project Name': material.get('project_name'),
-                'material_id': material.get('material_no'),
-                'material_desc': material.get('material_desc'),
-                'Annual Volume': annual_volume,
-                'SOP': material.get('sop'),
-                'Price (Pcs)': material.get('Pcs_Price'),
-                # Supplier
-                'supplier_id': supplier.get('vendor_id'),
-                'supplier_name': supplier.get('vendor_name'),
-                'Vendor Country': supplier.get('vendor_country'),
-                'City of Manufacture': supplier.get('city_of_manufacture'),
-                'Vendor ZIP': supplier.get('vendor_zip'),
-                'Deliveries per Month': supplier.get('deliveries_per_month'),
-                # Operations
-                'Incoterm code': operations_config.get('incoterm_code') if operations_config else 'N/A',
-                'Incoterm Named Place': operations_config.get('incoterm_place') if operations_config else 'N/A',
-                'MOQ': self.MOQ(material, supplier, packaging_config),
-                'Call-off transfer type': operations_config.get('calloff_type') if operations_config else 'N/A',
-                'Lead time (d)': operations_config.get('lead_time') if operations_config else 0,
-                'Sub-Supplier Used': operations_config.get('subsupplier_used') if operations_config else 'N/A',
-                # Packaging
-                # -- Packaging cost --
-                'packaging_cost_coc': coc_cost,
-                'packaging_cost_plant': plant_cost,
-                'Empty scraping (wood)': scrap_wood,
-                'packaging_cost_total': packaging_cost_total,
-                'packaging_cost_per_piece': packaging_cost,
-                # -- Standard Packaging (Plant) --
-                'packaging_type': packaging_config.get('box_type'),
-                'No. of Boxes per Layer': boxes_per_lu,
-                'weight pallet (empty in kg)': pallet_weight,
-                'packaging_weight (Plant)': p_weight,
-                'packaging_price_per_box': b_price,
-                'Filling quantity (pcs / LU)': fill_qty_lu,
-                # -- CoC Packaging (CoC) --
-                'Special packaging required': packaging_config.get('sp_needed'),
-                'packaging weight (CoC)': sp_weight,
-                'price per tray': price_tray,
-                'Filling quantity (pcs / LU) - SP': sp_fill_qty_pcs_lu,
-                'price of sp-pallet': sp_pallet_price,
-                'price of sp-cover': price_cover,
-                'weight of sp-pallet': sp_pallet_weight,
-                'Price / pc': pallet_price,
-                # -- Total Packaging Loop --
-                'Packaging Loop': self.total_packaging_loop(packaging_config, operations_config),
-                'goods_receipt': packaging_config.get("loop_data", {}).get("goods receipt", 0),
-                'stock_raw_materials': packaging_config.get("loop_data", {}).get("stock raw materials", 0),
-                'production': packaging_config.get("loop_data", {}).get("production", 0),
-                'empties_return': packaging_config.get("loop_data", {}).get("empties return", 0),
-                'cleaning': packaging_config.get("loop_data", {}).get("cleaning", 0),
-                'dispatch': packaging_config.get("loop_data", {}).get("dispatch", 0),
-                'empties_transit_kb_to_supplier': packaging_config.get("loop_data", {}).get("empties transit (KB → Supplier)", 0),
-                'empties_receipt_at_supplier': packaging_config.get("loop_data", {}).get("empties receipt (at Supplier)", 0),
-                'empties_in_stock_supplier': packaging_config.get("loop_data", {}).get("empties in stock (Supplier)", 0),
-                'production_contrary_loop': packaging_config.get("loop_data", {}).get("production (contrary loop)", 0),
-                'stock_finished_parts': packaging_config.get("loop_data", {}).get("stock finished parts", 0),
-                'dispatch_finished_parts': packaging_config.get("loop_data", {}).get("dispatch (finished parts", 0),
-                'transit_supplier_to_plant': packaging_config.get("loop_data", {}).get("transit (Supplier → KB)", 0),
-                # ---- Loop Plant ----
-                'No. of boxes - Plant': no_box_loop_plant,
-                'No. of LUs - Plant': no_lu_loop_plant,
-                # ---- Loop CoC ----
-                'No. of boxes - CoC': no_box_coc,
-                'No. of LUs - CoC': no_lu_coc,
-                'No. of trays - CoC': no_tray_coc,
-                'No. of sp-pallet covers - CoC': no_sp_pallet_cover,
-                # Repacking
-                'repacking_cost_per_piece': repacking_cost,
-                # Customs
-                'customs_cost_per_piece': customs_cost,
-                'Duty Rate (% Of pcs price)': customs_config.get('duty_rate', 0) if customs_config else 0,
-                # Transport
-                'transport_cost_per_piece': transport_cost,
-                'Transport type': transport_config.get('mode1'),
-                'pallets_per_delivery': self.pallets_per_delivery(material, supplier, packaging_config),
-                'Transport cost per LU': transport_config.get('cost_lu'),
-                # Warehouse
-                'warehouse_cost_per_piece': warehouse_cost,
-                'storage_locations_total': storage_loc_total,
-                'safety_stock_no_pal': safety_days,
-                'No. of Days': no_days,
-                'storage_locations_local': storage_loc_local,
-                # Additional Costs
-                'additional_cost_per_piece': additional_cost,
-                # CO2
-                'co2_cost_per_piece': co2_cost,
-                'CO2 emission (kg)': emission,
-                'Total tons': total_tons,
-                'weight_per_lu': weight_per_lu,
-                # Total Costs
-                'total_cost_per_piece': total_cost_per_piece,
-                'total_annual_cost': total_annual_cost,
-                # Metadata
-                'calculation_date': str(pd.Timestamp.now()) if 'pd' in globals() else str(datetime.now())
-            }
-            
-            return result
-            
-        except Exception as e:
-            self.calculation_errors.append(
-                f"Total cost calculation error for {material.get('material_no', 'Unknown')} - "
-                f"{supplier.get('vendor_id', 'Unknown')}: {str(e)}"
-            )
-            return None
-    
+           no_days = self.inventory_days(material, packaging_config)
+           safety_days = self.safety_stock_days(operations_config, packaging_config, material)
+           storage_loc_local = self.storage_locations_local(material, packaging_config)
+           storage_loc_total = self.storage_locations_total(material, packaging_config, operations_config)
+           
+           # Build result dictionary
+           result = {
+               # Material
+               'Project Name': material.get('project_name'),
+               'material_id': material.get('material_no'),
+               'material_desc': material.get('material_desc'),
+               'Annual Volume': annual_volume,
+               'SOP': material.get('sop'),
+               'Price (Pcs)': material.get('Pcs_Price'),
+               # Supplier
+               'supplier_id': supplier.get('vendor_id'),
+               'supplier_name': supplier.get('vendor_name'),
+               'Vendor Country': supplier.get('vendor_country'),
+               'City of Manufacture': supplier.get('city_of_manufacture'),
+               'Vendor ZIP': supplier.get('vendor_zip'),
+               'Deliveries per Month': supplier.get('deliveries_per_month'),
+               # Operations
+               'Incoterm code': operations_config.get('incoterm_code') if operations_config else 'N/A',
+               'Incoterm Named Place': operations_config.get('incoterm_place') if operations_config else 'N/A',
+               'MOQ': self.MOQ(material, supplier, packaging_config),
+               'Call-off transfer type': operations_config.get('calloff_type') if operations_config else 'N/A',
+               'Lead time (d)': operations_config.get('lead_time') if operations_config else 0,
+               'Sub-Supplier Used': operations_config.get('subsupplier_used') if operations_config else 'N/A',
+               # Packaging
+               # -- Packaging cost --
+               'packaging_cost_coc': coc_cost,
+               'packaging_cost_plant': plant_cost,
+               'Empty scraping (wood)': scrap_wood,
+               'packaging_cost_total': packaging_cost_total,
+               'packaging_cost_per_piece': packaging_cost,
+               # -- Standard Packaging (Plant) --
+               'packaging_type': packaging_config.get('box_type'),
+               'Filling degree per box': packaging_config.get('fill_qty_box', 0),
+               'Filling degree per pallet': fill_qty_lu,
+               'No. of Boxes per Layer': boxes_per_lu,
+               'weight pallet (empty in kg)': pallet_weight,
+               'packaging_weight (Plant)': p_weight,
+               'packaging_price_per_box': b_price,
+               'Filling quantity (pcs / LU)': fill_qty_lu,
+               # -- CoC Packaging (CoC) --
+               'Special packaging required': packaging_config.get('sp_needed'),
+               'packaging weight (CoC)': sp_weight,
+               'price per tray': price_tray,
+               'Filling quantity (pcs / LU) - SP': sp_fill_qty_pcs_lu,
+               'price of sp-pallet': sp_pallet_price,
+               'price of sp-cover': price_cover,
+               'weight of sp-pallet': sp_pallet_weight,
+               'Price / pc': pallet_price,
+               # -- Total Packaging Loop --
+               'Packaging Loop': self.total_packaging_loop(packaging_config, operations_config),
+               'goods_receipt': packaging_config.get("loop_data", {}).get("goods receipt", 0),
+               'stock_raw_materials': packaging_config.get("loop_data", {}).get("stock raw materials", 0),
+               'production': packaging_config.get("loop_data", {}).get("production", 0),
+               'empties_return': packaging_config.get("loop_data", {}).get("empties return", 0),
+               'cleaning': packaging_config.get("loop_data", {}).get("cleaning", 0),
+               'dispatch': packaging_config.get("loop_data", {}).get("dispatch", 0),
+               'empties_transit_kb_to_supplier': packaging_config.get("loop_data", {}).get("empties transit (KB → Supplier)", 0),
+               'empties_receipt_at_supplier': packaging_config.get("loop_data", {}).get("empties receipt (at Supplier)", 0),
+               'empties_in_stock_supplier': packaging_config.get("loop_data", {}).get("empties in stock (Supplier)", 0),
+               'production_contrary_loop': packaging_config.get("loop_data", {}).get("production (contrary loop)", 0),
+               'stock_finished_parts': packaging_config.get("loop_data", {}).get("stock finished parts", 0),
+               'dispatch_finished_parts': packaging_config.get("loop_data", {}).get("dispatch (finished parts)", 0),
+               'transit_supplier_to_plant': packaging_config.get("loop_data", {}).get("transit (Supplier → KB)", 0),
+               # ---- Loop Plant ----
+               'No. of boxes - Plant': no_box_loop_plant,
+               'No. of LUs - Plant': no_lu_loop_plant,
+               # ---- Loop CoC ----
+               'No. of boxes - CoC': no_box_coc,
+               'No. of LUs - CoC': no_lu_coc,
+               'No. of trays - CoC': no_tray_coc,
+               'No. of sp-pallet covers - CoC': no_sp_pallet_cover,
+               # Repacking
+               'repacking_cost_per_piece': repacking_cost,
+               # Customs
+               'customs_cost_per_piece': customs_cost,
+               'Duty Rate (% Of pcs price)': customs_config.get('duty_rate', 0) if customs_config else 0,
+               # Transport
+               'transport_cost_per_piece': transport_cost,
+               'Transport type': transport_config.get('mode1'),
+               'pallets_per_delivery': self.pallets_per_delivery(material, supplier, packaging_config),
+               'Transport cost per LU': transport_config.get('cost_lu'),
+               # Warehouse
+               'warehouse_cost_per_piece': warehouse_cost,
+               'storage_locations_total': storage_loc_total,
+               'safety_stock_no_pal': safety_days,
+               'No. of Days': no_days,
+               'storage_locations_local': storage_loc_local,
+               # Additional Costs
+               'additional_cost_per_piece': additional_cost,
+               # CO2
+               'co2_cost_per_piece': co2_cost,
+               'CO2 emission (kg)': emission,
+               'Total tons': total_tons,
+               'weight_per_lu': weight_per_lu,
+               # Total Costs
+               'total_cost_per_piece': total_cost_per_piece,
+               'total_annual_cost': total_annual_cost,
+               # Metadata
+               'calculation_date': str(pd.Timestamp.now()) if 'pd' in globals() else str(datetime.now())
+           }
+           
+           return result
+           
+       except Exception as e:
+           self.calculation_errors.append(
+               f"Total cost calculation error for {material.get('material_no', 'Unknown')} - "
+               f"{supplier.get('vendor_id', 'Unknown')}: {str(e)}"
+           )
+           return None
+   
     def calculate_all_costs(self, materials, suppliers, packaging_configs, transport_configs, 
-                           warehouse_configs, co2_configs, operations_configs=None, 
-                           location_configs=None, repacking_configs=None, customs_configs=None,
-                           inventory_configs=None, additional_costs=None):
-        """
-        Calculate logistics costs for all configured material-supplier combinations.
-        """
-        results = []
-        self.calculation_errors = []
-        
-        # Get first config for singleton configs
-        operations_config = operations_configs[0] if operations_configs else None
-        location_config = location_configs[0] if location_configs else None
-        repacking_config = repacking_configs[0] if repacking_configs else None
-        customs_config = customs_configs[0] if customs_configs else None
-        co2_config = co2_configs[0] if co2_configs else None
-        warehouse_config = warehouse_configs[0] if warehouse_configs else None
-        packaging_config = packaging_configs[0] if packaging_configs else None
-        transport_config = transport_configs[0] if transport_configs else None
-        
-        # Calculate for each material-supplier pair
-        for material in materials:
-            for supplier in suppliers:
-                # For now, use the first configs available
-                # In a real implementation, you might want to match configs to specific pairs
-                
-                if not all([packaging_config, transport_config, warehouse_config]):
-                    self.calculation_errors.append(
-                        f"Missing required configs for {material['material_no']} - {supplier['vendor_id']}"
-                    )
-                    continue
-                
-                # Calculate costs
-                result = self.calculate_total_logistics_cost(
-                    material=material,
-                    supplier=supplier,
-                    packaging_config=packaging_config,
-                    transport_config=transport_config,
-                    warehouse_config=warehouse_config,
-                    repacking_config=repacking_config,
-                    customs_config=customs_config,
-                    co2_config=co2_config,
-                    additional_costs=additional_costs,
-                    operations_config=operations_config,
-                    location_config=location_config,
-                    inventory_config=inventory_configs[0] if inventory_configs else None
-                )
-                
-                if result:
-                    results.append(result)
-        
-        return results
-    
+                          warehouse_configs, co2_configs, operations_configs=None, 
+                          location_configs=None, repacking_configs=None, customs_configs=None,
+                          inventory_configs=None, additional_costs=None):
+       """
+       Calculate logistics costs for all configured material-supplier combinations.
+       """
+       results = []
+       self.calculation_errors = []
+       
+       # Get first config for singleton configs
+       operations_config = operations_configs[0] if operations_configs else None
+       location_config = location_configs[0] if location_configs else None
+       repacking_config = repacking_configs[0] if repacking_configs else None
+       customs_config = customs_configs[0] if customs_configs else None
+       co2_config = co2_configs[0] if co2_configs else None
+       warehouse_config = warehouse_configs[0] if warehouse_configs else None
+       packaging_config = packaging_configs[0] if packaging_configs else None
+       transport_config = transport_configs[0] if transport_configs else None
+       
+       # Calculate for each material-supplier pair
+       for material in materials:
+           for supplier in suppliers:
+               # For now, use the first configs available
+               # In a real implementation, you might want to match configs to specific pairs
+               
+               if not all([packaging_config, transport_config, warehouse_config]):
+                   self.calculation_errors.append(
+                       f"Missing required configs for {material['material_no']} - {supplier['vendor_id']}"
+                   )
+                   continue
+               
+               # Calculate costs
+               result = self.calculate_total_logistics_cost(
+                   material=material,
+                   supplier=supplier,
+                   packaging_config=packaging_config,
+                   transport_config=transport_config,
+                   warehouse_config=warehouse_config,
+                   repacking_config=repacking_config,
+                   customs_config=customs_config,
+                   co2_config=co2_config,
+                   additional_costs=additional_costs,
+                   operations_config=operations_config,
+                   location_config=location_config,
+                   inventory_config=inventory_configs[0] if inventory_configs else None
+               )
+               
+               if result:
+                   results.append(result)
+       
+       return results
+   
     def get_calculation_errors(self):
-        """
-        Return any calculation errors that occurred.
-        """
-        return self.calculation_errors
-    
+       """
+       Return any calculation errors that occurred.
+       """
+       return self.calculation_errors
+   
     def validate_configuration(self, material, supplier, packaging_config, transport_config, warehouse_config, co2_config):
-        """
-        Validate that all required configuration parameters are present and valid.
-        """
-        errors = []
-        
-        # Material validation
-        if not material.get('material_no'):
-            errors.append("Material number is required")
-        if not material.get('weight_per_pcs') or material.get('weight_per_pcs') <= 0:
-            errors.append("Valid weight per piece is required")
-        if not material.get('annual_volume') or material.get('annual_volume') <= 0:
-            errors.append("Valid annual volume is required")
-        
-        # Supplier validation
-        if not supplier.get('vendor_id'):
-            errors.append("Supplier vendor ID is required")
-        
-        # Packaging validation
-        if not packaging_config:
-            errors.append("Packaging configuration is required")
-        
-        # Transport validation
-        if not transport_config:
-            errors.append("Transport configuration is required")
-        
-        # Warehouse validation
-        if not warehouse_config:
-            errors.append("Warehouse configuration is required")
+       """
+       Validate that all required configuration parameters are present and valid.
+       """
+       errors = []
+       
+       # Material validation
+       if not material.get('material_no'):
+           errors.append("Material number is required")
+       if not material.get('weight_per_pcs') or material.get('weight_per_pcs') <= 0:
+           errors.append("Valid weight per piece is required")
+       if not material.get('annual_volume') or material.get('annual_volume') <= 0:
+           errors.append("Valid annual volume is required")
+       
+       # Supplier validation
+       if not supplier.get('vendor_id'):
+           errors.append("Supplier vendor ID is required")
+       
+       # Packaging validation
+       if not packaging_config:
+           errors.append("Packaging configuration is required")
+       
+       # Transport validation
+       if not transport_config:
+           errors.append("Transport configuration is required")
+       
+       # Warehouse validation
+       if not warehouse_config:
+           errors.append("Warehouse configuration is required")
 
-        # CO2 validation
-        if not co2_config:
-            errors.append("CO2 configuration is required")
-        
-        return errors
+       # CO2 validation
+       if not co2_config:
+           errors.append("CO2 configuration is required")
+       
+       return errors
 
 
 # Import datetime if pandas is not available
 try:
-    import pandas as pd
+   import pandas as pd
 except ImportError:
-    from datetime import datetime
+   from datetime import datetime
