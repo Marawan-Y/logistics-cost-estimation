@@ -1,130 +1,122 @@
 import streamlit as st
-from utils.validators import CustomsValidator
+from utils.validators import LocationValidator
 from utils.data_manager import DataManager
 
-st.set_page_config(page_title="Customs Cost", page_icon="🛃")
+st.set_page_config(page_title="KB/Bendix Location Info", page_icon="📍")
 
 def main():
-    st.title("Customs Cost")
-    st.markdown("Configure customs-related cost parameters")
+    st.title("KB/Bendix Location Information")
+    st.markdown("Configure plant location details")
     st.markdown("---")
 
-    # Initialize DataManager & Validator
     if 'data_manager' not in st.session_state:
         st.session_state.data_manager = DataManager()
-    dm = st.session_state.data_manager
-    val = CustomsValidator()
+    data_manager = st.session_state.data_manager
+    validator = LocationValidator()
 
-    # Preference selector outside form for instant effect
-    pref_usage = st.selectbox(
-        "Customs Preference Usage (Y/N) *",
-        ["Yes", "No"],
-        help="Whether customs preference is used",
-        key="cust_pref_usage"
-    )
-
-    # ---------- Add New Customs Cost ----------
-    with st.form("customs_form"):
-        st.subheader("Add New Customs Cost")
-        col1, _ = st.columns(2)
+    # ---------- Add New Location ----------
+    with st.form("location_form"):
+        st.subheader("Add New Location")
+        col1, col2 = st.columns(2)
         with col1:
-            if pref_usage == "No":
-                duty_rate = st.number_input(
-                    "Duty Rate (% of pcs price) *",
-                    min_value=0.0, max_value=100.0,
-                    step=0.01, format="%.2f",
-                    help="Duty rate as a percentage of piece price",
-                    key="new_duty_rate_input"
-                )
-            else:
-                duty_rate = 0.0
-                st.write("Duty rate not required when preference is Yes.")
-
-        submitted = st.form_submit_button("Add Customs Cost", type="primary")
+            plant = st.text_input("KB/Bendix Plant *")
+            country = st.text_input("KB/Bendix – Country *")
+        with col2:
+            distance = st.number_input(
+                "Distance (km) *",
+                min_value=0.0, step=0.1,
+                help="Distance from supplier to KB/Bendix plant"
+            )
+        submitted = st.form_submit_button("Add Location", type="primary")
         if submitted:
-            obj = {
-                "pref_usage": pref_usage,
-                "duty_rate": duty_rate
-            }
-            res = val.validate_customs(obj)
+            loc = {"plant": plant, "country": country, "distance": distance}
+            res = validator.validate_location(loc)
             if res["is_valid"]:
-                dm.add_customs(obj)
-                st.success("Customs cost added successfully!")
-                st.rerun()
+                if data_manager.location_exists(plant):
+                    st.error(f"Plant {plant} already exists. Use edit instead.")
+                else:
+                    data_manager.add_location(loc)
+                    st.success("Location added successfully!")
+                    st.rerun()
             else:
                 for e in res["errors"]:
                     st.error(e)
 
     st.markdown("---")
-    # ---------- Display Existing Customs Costs ----------
-    st.subheader("Existing Customs Costs")
-    customs_list = dm.get_customs()
-    if not customs_list:
-        st.info("No customs costs configured yet.")
 
-    # Callbacks to manage edit flags
+    # Helper callbacks for edit/cancel
     def enter_edit(idx):
-        st.session_state[f"edit_cust_{idx}"] = True
+        st.session_state[f"edit_loc_flag_{idx}"] = True
 
     def exit_edit(idx):
-        st.session_state[f"edit_cust_{idx}"] = False
+        st.session_state[f"edit_loc_flag_{idx}"] = False
 
-    # Display entries
-    for i, cust in enumerate(customs_list):
-        flag_key = f"edit_cust_{i}"
+    # ---------- Existing ----------
+    st.subheader("Existing Locations")
+    locations = data_manager.get_locations()
+    if not locations:
+        st.info("No locations configured yet.")
+    for i, loc in enumerate(locations):
+        # Ensure an edit flag exists for each index
+        flag_key = f"edit_loc_flag_{i}"
         if flag_key not in st.session_state:
             st.session_state[flag_key] = False
 
-        with st.expander(f"Preference: {cust['pref_usage']}"):
-            st.write(f"**Duty Rate:** {cust['duty_rate']:.2f}%")
-            col1, col2 = st.columns([3, 1])
+        with st.expander(f"{loc['plant']} – {loc['country']}"):
+            col1, col2, col3 = st.columns([3,1,1])
             with col1:
-                if st.button("Edit", key=f"edit_btn_{i}", on_click=enter_edit, args=(i,)):
-                    pass
+                st.write(f"**Distance:** {loc['distance']:.1f} km")
             with col2:
+                # Use a different key for the button widget
+                if st.button("Edit", key=f"edit_btn_{i}", on_click=enter_edit, args=(i,)):
+                    pass  # the callback enter_edit will set the flag
+            with col3:
+                # Delete can be immediate
                 if st.button("Delete", key=f"del_btn_{i}", type="secondary"):
-                    dm.remove_customs(i)
-                    st.success("Customs cost deleted.")
+                    data_manager.remove_location(loc["plant"])
+                    st.success("Location deleted")
                     st.rerun()
 
-    # ---------- Edit Customs Cost ----------
-    for i, cust in enumerate(customs_list):
-        if st.session_state.get(f"edit_cust_{i}", False):
-            with st.form(f"edit_cust_form_{i}"):
-                st.subheader(f"Edit Customs Cost: Preference {cust['pref_usage']}")
-                st.write(f"**Customs Preference Usage:** {cust['pref_usage']}")
-                if cust['pref_usage'] == "No":
-                    new_duty_rate = st.number_input(
-                        "Duty Rate (% of pcs price) *",
-                        value=cust['duty_rate'],
-                        min_value=0.0, max_value=100.0,
-                        step=0.01, format="%.2f",
-                        key=f"edit_duty_rate_{i}"
+    # ---------- Edit Forms ----------
+    for i, loc in enumerate(locations):
+        flag_key = f"edit_loc_flag_{i}"
+        if st.session_state.get(flag_key, False):
+            # Show edit form
+            with st.form(f"edit_loc_form_{i}"):
+                st.subheader(f"Edit Location: {loc['plant']}")
+                col1, col2 = st.columns(2)
+                with col1:
+                    new_country = st.text_input(
+                        "KB/Bendix – Country", value=loc["country"], key=f"country_input_{i}"
                     )
-                else:
-                    new_duty_rate = 0.0
-                    st.write("Duty rate not editable when preference is Yes.")
-
-                col_upd, col_cancel = st.columns(2)
-                with col_upd:
-                    if st.form_submit_button("Update Customs Cost", type="primary"):
+                with col2:
+                    new_distance = st.number_input(
+                        "Distance (km)",
+                        value=loc["distance"], min_value=0.0, step=0.1,
+                        key=f"distance_input_{i}"
+                    )
+                col1b, col2b = st.columns(2)
+                with col1b:
+                    if st.form_submit_button("Update", type="primary"):
                         upd = {
-                            "pref_usage": cust['pref_usage'],
-                            "duty_rate": new_duty_rate
+                            "plant": loc["plant"],
+                            "country": new_country,
+                            "distance": new_distance,
                         }
-                        res = val.validate_customs(upd)
+                        res = validator.validate_location(upd)
                         if res["is_valid"]:
-                            dm.update_customs(i, upd)
-                            st.success("Customs cost updated.")
+                            data_manager.update_location(loc["plant"], upd)
+                            st.success("Location updated")
                             exit_edit(i)
                             st.rerun()
                         else:
                             for e in res["errors"]:
                                 st.error(e)
-                with col_cancel:
+                with col2b:
                     if st.form_submit_button("Cancel"):
                         exit_edit(i)
                         st.rerun()
+
 
 if __name__ == "__main__":
     main()
