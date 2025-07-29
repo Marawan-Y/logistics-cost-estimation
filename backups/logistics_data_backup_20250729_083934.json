@@ -112,18 +112,14 @@
       "co2_conversion_factor": "3.17"
     }
   ],
-  "warehouse": [
-    {
-      "cost_per_loc": 5.0
-    }
-  ],
+  "warehouse": [],
   "interest": [],
   "additional_costs": [],
   "settings": {
     "auto_save": true
   },
   "metadata": {
-    "save_timestamp": "2025-07-29T08:39:34.786036",
+    "save_timestamp": "2025-07-29T08:39:21.325997",
     "version": "1.0.0"
   }
 }
