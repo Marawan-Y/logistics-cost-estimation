@@ -255,10 +255,10 @@ def main():
 
     # Test calculation section
     st.markdown("---")
-    st.subheader("🧪 Test Transport Cost Calculation (5-Step Workflow)")
+    st.subheader("🧪 Test Transport Cost Calculation")
 
     with st.form("transport_test_form"):
-        st.markdown("### Step 1: Material and Packaging")
+        st.markdown("### Material and Packaging")
         col1, col2, col3 = st.columns(3)
         
         with col1:
@@ -275,7 +275,7 @@ def main():
             test_pallet_weight = st.number_input("Pallet weight (kg)", value=25.0, step=0.1)
             test_stackability = st.number_input("Stackability factor", value=2.0, min_value=1.0, step=0.1)
         
-        st.markdown("### Step 3: Route Information")
+        st.markdown("### Route Information")
         col1, col2 = st.columns(2)
         
         with col1:
