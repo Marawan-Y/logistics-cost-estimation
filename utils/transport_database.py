@@ -89,7 +89,7 @@ class TransportDatabase:
             
             # Add prices for each weight cluster
             for i, weight in enumerate(self.weight_clusters):
-                price_value = row.iloc[14 + i]
+                price_value = row.iloc[15 + i]
                 if pd.notna(price_value):
                     price = self._parse_price(price_value)
                     if price is not None:

@@ -1,0 +1,58 @@
+Build a MySQL-Backed Streamlit Application for Transport Cost Evaluation
+Objective:
+Create a complete workflow that builds a MySQL database named Transport_database, imports data from the provided Excel (Book 3.xlsx) or its converted formats (Book_3_converted.csv, Book_3_converted.json), and integrates this database into a Streamlit application. The application should support transport cost calculations and data retrieval based on parameters defined in the Excel file Mappe2 1 1.xlsx.
+
+📁 Input Files:
+Data Source:
+Book 3.xlsx (or its CSV/JSON equivalents) — contains the raw transport-related data.
+Workflow Definition:
+Mappe2 1 1.xlsx — contains the logic, formulas, and parameters for transport cost evaluation.
+🧱 Step 1: Database Setup
+Database Name: Transport_database
+Technology: MySQL (already installed and running)
+Tasks:
+Analyze the structure of Book 3.xlsx and define appropriate tables and schema.
+Create SQL scripts to:
+Create the database and tables.
+Insert all data from the chosen format (CSV/JSON/Excel).
+Ensure data types and relationships are preserved.
+🧮 Step 2: Logic Integration from Mappe2 1 1.xlsx
+Extract the calculation logic and parameter definitions from the Excel file.
+Implement the following steps in the application:
+Step 1: Weight and quantity calculations
+Step 2: Route and delivery parameters
+Step 3: Cost evaluation based on carrier pricing and delivery metrics
+Use the Excel sheet as a reference for:
+Default values
+Lookup tables (e.g., packaging types, country codes)
+Conditional logic (e.g., full truck load pricing)
+🖥️ Step 3: Streamlit Application
+Frontend Features:
+Input fields for user-defined parameters (e.g., material weight, packaging type, delivery frequency)
+Dropdowns or selectors populated from the database
+Buttons to trigger calculations
+Backend Integration:
+Connect to the MySQL database
+Perform calculations using the logic from Mappe2 1 1.xlsx
+Display results in a user-friendly format (tables, charts, summaries)
+Output:
+Transport cost per delivery
+Price per loading unit (LU)
+Lead time and route details
+🔄 Step 4: Workflow Automation
+Allow users to:
+Modify parameters dynamically
+Save and retrieve calculation scenarios
+Export results (CSV, PDF)
+🧩 Notes:
+Default receiver location is Aldersbach, DE 94501
+Stackability factor, loading meters, and other derived metrics must be calculated as per the Excel logic
+Ensure international vs. national pricing logic is respected
+Include error handling for missing or inconsistent data
+
+
+
+
+-----------------------
+
+The calculation workflow are already given by claude before, call it and provide instead of the workflow text description
