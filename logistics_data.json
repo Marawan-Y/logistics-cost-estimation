@@ -25,6 +25,15 @@
       "vendor_zip": "99817",
       "delivery_performance": 0.0,
       "deliveries_per_month": 2
+    },
+    {
+      "vendor_id": "917590",
+      "vendor_name": "Sensata",
+      "vendor_country": "DE",
+      "city_of_manufacture": "Bergkirchen",
+      "vendor_zip": "85232",
+      "delivery_performance": 0.0,
+      "deliveries_per_month": 2
     }
   ],
   "locations": [
@@ -32,6 +41,11 @@
       "plant": "Aldersbach",
       "country": "DE",
       "distance": 500.0
+    },
+    {
+      "plant": "Aldersbach",
+      "country": "DE",
+      "distance": 150.0
     }
   ],
   "operations": [
@@ -45,6 +59,19 @@
       "subsupplier_used": "No",
       "subsupplier_box_days": 0,
       "packaging_tool_owner": "KB",
+      "responsible": "CoC",
+      "currency": "EUR"
+    },
+    {
+      "incoterm_code": "EXW",
+      "incoterm_place": "Bergkirchen",
+      "part_class": "C-Part",
+      "calloff_type": "EDI",
+      "directive": "Yes",
+      "lead_time": 30,
+      "subsupplier_used": "No",
+      "subsupplier_box_days": 0,
+      "packaging_tool_owner": "Supplier",
       "responsible": "CoC",
       "currency": "EUR"
     }
@@ -123,7 +150,7 @@
     "auto_save": true
   },
   "metadata": {
-    "save_timestamp": "2025-07-29T08:39:34.786036",
+    "save_timestamp": "2025-08-12T12:28:16.950355",
     "version": "1.0.0"
   }
 }

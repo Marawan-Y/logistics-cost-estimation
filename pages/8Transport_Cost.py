@@ -4,6 +4,8 @@ from utils.validators import TransportValidator
 from utils.data_manager import DataManager
 from utils.transport_database import TransportDatabase
 import uuid
+from decimal import Decimal
+
 
 st.set_page_config(page_title="Transport Cost", page_icon="🚚")
 
@@ -262,7 +264,7 @@ def main():
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            test_material_weight = st.number_input("Material weight/piece (kg)", value=0.08, step=0.01)
+            test_material_weight = st.number_input("Material weight/piece (kg)", min_value=0.0, value=0.08, step=0.001, format="%.3f", key="material_weight_piece")
             test_pieces_per_pkg = st.number_input("Pieces per packaging", value=100, step=1)
             test_pkg_weight = st.number_input("Packaging weight (kg)", value=1.67, step=0.01)
         
