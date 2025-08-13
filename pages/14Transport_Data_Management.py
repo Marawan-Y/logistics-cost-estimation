@@ -29,7 +29,7 @@ def main():
     transport_db = st.session_state.transport_db
     
     # Create tabs
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 View Database", "➕ Add/Edit Lane", "📁 Import/Export", "🔍 Search & Filter", "📈 Statistics"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 View Database", "➕ Add/Edit Lane", "📁 Import/Export", "🔍 Search & Filter"])
     
     # Tab 1: View Database
     with tab1:
@@ -443,9 +443,9 @@ def main():
             else:
                 st.warning("No lanes found matching the criteria")
     
-    # Tab 5: Statistics
-    with tab5:
-        st.subheader("Database Statistics -- Soon!")
+    # # Tab 5: Statistics
+    # with tab5:
+    #     st.subheader("Database Statistics -- Soon!")
         
         # if len(transport_db.database) > 0:
         #     stats = transport_db.get_statistics()

@@ -32,12 +32,9 @@ def main():
             loc = {"plant": plant, "country": country, "distance": distance}
             res = validator.validate_location(loc)
             if res["is_valid"]:
-                if data_manager.location_exists(plant):
-                    st.error(f"Plant {plant} already exists. Use edit instead.")
-                else:
-                    data_manager.add_location(loc)
-                    st.success("Location added successfully!")
-                    st.rerun()
+                data_manager.add_location(loc)
+                st.success("Location added successfully!")
+                st.rerun()
             else:
                 for e in res["errors"]:
                     st.error(e)
