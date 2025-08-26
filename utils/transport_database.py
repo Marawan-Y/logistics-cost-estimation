@@ -359,6 +359,7 @@ class TransportDatabase:
         pieces_per_packaging: int,
         packaging_weight: float,  # kg
         daily_demand: int,
+        fill_qty_lu: float,
         deliveries_per_month: int,
         packaging_units_per_pallet: int,
         pallet_weight: float,  # kg
@@ -405,7 +406,8 @@ class TransportDatabase:
             num_pallets=pallets_needed,
         )
 
-        price_per_piece = cost_result["total_cost"] / monthly_demand_per_delivery if monthly_demand_per_delivery > 0 else 0.0
+        price_per_pallet = cost_result.get("cost_per_pallet", 0.0)
+        price_per_piece = price_per_pallet / fill_qty_lu if fill_qty_lu > 0 else 0.0
 
         return {
             "success": True,
