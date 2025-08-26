@@ -204,7 +204,7 @@ class LogisticsCostCalculator:
         fill = packaging_config.get('fill_qty_box', 1)
         p_weight = self.packaging_weight(packaging_config)
         if fill > 0:
-            return (av / fill) * (p_weight / 1000.0)
+            return (av / fill) * (p_weight / 1000.0) * 160
         return 0.0
 
     # ** PLANT **
