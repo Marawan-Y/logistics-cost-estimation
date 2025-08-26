@@ -50,7 +50,14 @@ def main():
                 "Usage",
                 help="Describe the intended usage for this material"
             )
-
+            life_time_years = st.number_input(
+                "Life time in years *",
+                value=0,
+                min_value=0,
+                step=1,
+                format="%d",  # Integer formatting
+                help="Average Material Life Time in years"
+            )
         with col2:
             # Removed: lifetime_volume - marked as "not needed"
             # Removed: peak_year - marked as "not needed"
@@ -111,7 +118,8 @@ def main():
                 'peak_year_volume': 0,  # Keep for backward compatibility but set to 0
                 'working_days': working_days,
                 'sop': sop,
-                'Pcs_Price': Pcs_Price
+                'Pcs_Price': Pcs_Price,
+                'life_time_years' : life_time_years
             }
             
             validation_result = validator.validate_material(material_data)
@@ -147,7 +155,8 @@ def main():
                     st.write(f"**SOP:** {material.get('sop', 'N/A')}")
                     st.write(f"**Usage:** {material.get('usage', 'N/A')}")
                     st.write(f"**Daily demand:** {material.get('daily_demand', 0):.2f} pcs")
-                    st.write(f"**Pcs_Price:** €{material.get('Pcs_Price', 0):.2f}")               
+                    st.write(f"**Pcs_Price:** €{material.get('Pcs_Price', 0):.2f}")   
+                    st.write(f"**life_time_years:** {int(material.get('life_time_years', 0))}")             
                 with col2:
                     if st.button("Edit", key=f"edit_{i}"):
                         st.session_state[f'edit_material_{i}'] = True
@@ -187,6 +196,16 @@ def main():
                             "Usage",
                             value=material.get('usage', '')
                         )
+                        new_life_time_years = st.number_input(
+                            "Life time in years *",
+                            value=int(material.get('life_time_years') or 0),
+                            min_value=0,
+                            step=1,
+                            format="%d",  # Integer formatting
+                        )
+                    
+                    with col2:
+                        # Removed lifetime, peak year, and peak year volume from edit form
                         new_annual_volume = st.number_input(
                             "Annual volume (average)",
                             value=material.get('annual_volume', 0),
@@ -201,9 +220,6 @@ def main():
                             step=0.01,
                             format="%.2f"
                         )
-                    
-                    with col2:
-                        # Removed lifetime, peak year, and peak year volume from edit form
                         new_working_days = st.number_input(
                             "Working Days per year",
                             value=material.get('working_days', 250),
@@ -239,7 +255,8 @@ def main():
                                 'peak_year_volume': material.get('peak_year_volume', 0),  # Keep existing value for compatibility
                                 'working_days': new_working_days,
                                 'sop': new_sop,
-                                'Pcs_Price': new_Pcs_Price
+                                'Pcs_Price': new_Pcs_Price,
+                                'life_time_years' : new_life_time_years
                             }
                             
                             validation_result = validator.validate_material(updated_material)

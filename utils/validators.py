@@ -110,8 +110,8 @@ class MaterialValidator(BaseValidator):
         if daily_demand is not None and not self.is_positive_number(daily_demand, allow_zero=True):
             errors.append("Daily demand must be a non-negative number")
         
-        lifetime_volume = material_data.get('lifetime_volume')
-        if lifetime_volume is not None and not self.is_positive_number(lifetime_volume, allow_zero=True):
+        lifetime_years = material_data.get('lifetime_years')
+        if lifetime_years is not None and not self.is_positive_number(lifetime_years, allow_zero=True):
             errors.append("Lifetime must be a non-negative number")
         
         peak_year = material_data.get('peak_year', '').strip()

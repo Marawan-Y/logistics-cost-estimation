@@ -292,6 +292,7 @@ def main():
         
         if calculate_button:
             # Run the calculation
+            fill_qty_lu = max(test_pieces_per_pkg, 1) * max(test_units_per_pallet, 1)
             result = transport_db.calculate_transport_cost_workflow(
                 material_weight_per_piece=test_material_weight,
                 pieces_per_packaging=test_pieces_per_pkg,
@@ -304,7 +305,8 @@ def main():
                 supplier_country=test_origin_country,
                 supplier_zip=test_origin_zip,
                 dest_country=test_dest_country,
-                dest_zip=test_dest_zip
+                dest_zip=test_dest_zip,
+                fill_qty_lu=fill_qty_lu
             )
             
             if result.get('success'):
