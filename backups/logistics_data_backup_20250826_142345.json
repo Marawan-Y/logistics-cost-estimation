@@ -1,68 +1,51 @@
 {
   "materials": [
     {
-      "project_name": "EPS",
-      "material_no": "k298903",
-      "material_desc": "Pre Pressure Sensor",
-      "weight_per_pcs": 0.033,
-      "usage": "2,0",
-      "daily_demand": 320.0,
-      "annual_volume": 80000,
+      "project_name": "SN7",
+      "material_no": "K038600",
+      "material_desc": "Brake pad",
+      "weight_per_pcs": 2.566,
+      "usage": "",
+      "daily_demand": 360.0,
+      "annual_volume": 90000,
       "lifetime_volume": 0.0,
       "peak_year": "",
       "peak_year_volume": 0,
       "working_days": 250,
-      "sop": "2026",
-      "Pcs_Price": 0.0
+      "sop": "",
+      "Pcs_Price": 0.0,
+      "life_time_years": 10
     }
   ],
   "suppliers": [
     {
-      "vendor_id": "909607",
-      "vendor_name": "Bosch",
+      "vendor_id": "902141",
+      "vendor_name": "MAT",
       "vendor_country": "DE",
-      "city_of_manufacture": "Eisenach",
-      "vendor_zip": "99817",
+      "city_of_manufacture": "Marienheide",
+      "vendor_zip": "51709",
       "delivery_performance": 0.0,
-      "deliveries_per_month": 2
+      "deliveries_per_month": 10
     }
   ],
   "locations": [
     {
       "plant": "Aldersbach",
       "country": "DE",
-      "distance": 500.0
-    },
-    {
-      "plant": "Aldersbach",
-      "country": "DE",
-      "distance": 150.0
+      "distance": 600.0
     }
   ],
   "operations": [
     {
       "incoterm_code": "FCA",
-      "incoterm_place": "Eisenach",
+      "incoterm_place": "Marienheide",
       "part_class": "C-Part",
       "calloff_type": "EDI",
       "directive": "Yes",
-      "lead_time": 30,
+      "lead_time": 20,
       "subsupplier_used": "No",
       "subsupplier_box_days": 0,
       "packaging_tool_owner": "KB",
-      "responsible": "CoC",
-      "currency": "EUR"
-    },
-    {
-      "incoterm_code": "EXW",
-      "incoterm_place": "Bergkirchen",
-      "part_class": "C-Part",
-      "calloff_type": "EDI",
-      "directive": "Yes",
-      "lead_time": 30,
-      "subsupplier_used": "No",
-      "subsupplier_box_days": 0,
-      "packaging_tool_owner": "Supplier",
       "responsible": "CoC",
       "currency": "EUR"
     }
@@ -71,18 +54,18 @@
     {
       "pack_maint": 0.0,
       "empties_scrap": 0.0,
-      "box_type": "KLT6417 / LID",
-      "fill_qty_box": 136,
+      "box_type": "Wooden Box",
+      "fill_qty_box": 480,
       "pallet_type": "EURO Pallet Price",
       "fill_qty_lu_oversea": 0,
-      "add_pack_price": 10.0,
+      "add_pack_price": 0.0,
       "sp_needed": "No",
-      "sp_type": "Inlay Tray",
-      "fill_qty_tray": 0,
-      "tooling_cost": 0.0,
+      "sp_type": "Standalone tray",
+      "fill_qty_tray": 12,
+      "tooling_cost": 750.0,
       "add_sp_pack": "No",
-      "trays_per_sp_pal": 0,
-      "sp_pallets_per_lu": 0,
+      "trays_per_sp_pal": 16,
+      "sp_pallets_per_lu": 4,
       "loop_data": {
         "goods receipt": 1,
         "stock raw materials": 4,
@@ -103,7 +86,7 @@
   "repacking": [
     {
       "pcs_weight": "None",
-      "packaging_one_way": "N/A",
+      "packaging_one_way": "Bulk (poss. in bag) in cardboard/wooden box",
       "packaging_returnable": "N/A"
     }
   ],
@@ -116,12 +99,12 @@
   "transport": [
     {
       "mode1": "Road",
-      "cost_lu": 0.0,
+      "cost_lu": 37.82,
       "cost_bonded": 0.0,
-      "stack_factor": "2",
+      "stack_factor": "1",
       "use_bonded_warehouse": false,
-      "auto_calculate": true,
-      "key": "ce754174-7478-44ee-aa0e-5ce5496a9db4"
+      "auto_calculate": false,
+      "key": "f6336f7d-af67-4804-acf2-1490351b8eff"
     }
   ],
   "co2": [
@@ -135,13 +118,17 @@
       "cost_per_loc": 5.0
     }
   ],
-  "interest": [],
+  "interest": [
+    {
+      "rate": 0.0
+    }
+  ],
   "additional_costs": [],
   "settings": {
     "auto_save": true
   },
   "metadata": {
-    "save_timestamp": "2025-08-12T12:27:04.182630",
+    "save_timestamp": "2025-08-26T14:23:45.810294",
     "version": "1.0.0"
   }
 }

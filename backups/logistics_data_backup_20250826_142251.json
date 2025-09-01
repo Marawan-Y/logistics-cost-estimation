@@ -13,7 +13,8 @@
       "peak_year_volume": 0,
       "working_days": 250,
       "sop": "2026",
-      "Pcs_Price": 0.0
+      "Pcs_Price": 0.0,
+      "life_time_years": 5
     }
   ],
   "suppliers": [
@@ -25,6 +26,15 @@
       "vendor_zip": "99817",
       "delivery_performance": 0.0,
       "deliveries_per_month": 2
+    },
+    {
+      "vendor_id": "917590",
+      "vendor_name": "Sensata",
+      "vendor_country": "DE",
+      "city_of_manufacture": "Bergkirchen",
+      "vendor_zip": "85232",
+      "delivery_performance": 0.0,
+      "deliveries_per_month": 2
     }
   ],
   "locations": [
@@ -32,19 +42,24 @@
       "plant": "Aldersbach",
       "country": "DE",
       "distance": 500.0
+    },
+    {
+      "plant": "Aldersbach",
+      "country": "DE",
+      "distance": 150.0
     }
   ],
   "operations": [
     {
-      "incoterm_code": "FCA",
-      "incoterm_place": "Eisenach",
+      "incoterm_code": "EXW",
+      "incoterm_place": "Bergkirchen",
       "part_class": "C-Part",
       "calloff_type": "EDI",
       "directive": "Yes",
       "lead_time": 30,
       "subsupplier_used": "No",
       "subsupplier_box_days": 0,
-      "packaging_tool_owner": "KB",
+      "packaging_tool_owner": "Supplier",
       "responsible": "CoC",
       "currency": "EUR"
     }
@@ -112,14 +127,18 @@
       "co2_conversion_factor": "3.17"
     }
   ],
-  "warehouse": [],
+  "warehouse": [
+    {
+      "cost_per_loc": 5.0
+    }
+  ],
   "interest": [],
   "additional_costs": [],
   "settings": {
     "auto_save": true
   },
   "metadata": {
-    "save_timestamp": "2025-07-29T08:39:21.325997",
+    "save_timestamp": "2025-08-26T12:16:01.511488",
     "version": "1.0.0"
   }
 }

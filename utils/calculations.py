@@ -204,7 +204,7 @@ class LogisticsCostCalculator:
         fill = packaging_config.get('fill_qty_box', 1)
         p_weight = self.packaging_weight(packaging_config)
         b_type = packaging_config.get('box_type', 'None')
-        if fill > 0 & b_type == 'Wooden Box':
+        if fill > 0 and b_type == 'Wooden Box':
             return (av / fill) * (p_weight / 1000.0) * 160
         return 0.0
 
