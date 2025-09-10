@@ -104,7 +104,7 @@
       "stack_factor": "1",
       "use_bonded_warehouse": false,
       "auto_calculate": false,
-      "key": "f6336f7d-af67-4804-acf2-1490351b8eff"
+      "key": "d6f31709-b824-46f1-94b0-a75d512a480f"
     }
   ],
   "co2": [
@@ -128,7 +128,7 @@
     "auto_save": true
   },
   "metadata": {
-    "save_timestamp": "2025-08-26T14:23:47.201604",
+    "save_timestamp": "2025-09-10T07:46:04.836401",
     "version": "1.0.0"
   }
 }
