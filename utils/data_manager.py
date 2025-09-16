@@ -583,25 +583,49 @@ class DataManager:
             return False
 
     # CO2 management
+
     def add_co2(self, co2_data: Dict[str, Any]) -> bool:
-        """Add CO2 configuration."""
+        """Add CO2 configuration - now supports multiple configurations."""
         try:
             st.session_state.co2.append(co2_data)
             self._save_data_automatically()
             return True
         except Exception:
             return False
-    
+        
     def get_co2(self) -> List[Dict[str, Any]]:
         """Get all CO2 configurations."""
         return st.session_state.co2
-    
+
     def co2_exists(self) -> bool:
-        """Check if CO2 configuration exists."""
+        """Check if CO2 configuration exists - now checks if any exist."""
         return len(st.session_state.co2) > 0
-    
+
+    def update_co2_by_index(self, index: int, updated_data: Dict[str, Any]) -> bool:
+        """Update CO2 configuration by index."""
+        try:
+            if 0 <= index < len(st.session_state.co2):
+                st.session_state.co2[index] = updated_data
+                self._save_data_automatically()
+                return True
+            return False
+        except Exception:
+            return False
+
+    def remove_co2_by_index(self, index: int) -> bool:
+        """Remove CO2 configuration by index."""
+        try:
+            if 0 <= index < len(st.session_state.co2):
+                st.session_state.co2.pop(index)
+                self._save_data_automatically()
+                return True
+            return False
+        except Exception:
+            return False
+
+    # Backward compatibility methods
     def update_co2(self, cost_per_ton: float, updated_data: Dict[str, Any]) -> bool:
-        """Update CO2 configuration."""
+        """Update CO2 configuration by cost_per_ton - kept for backward compatibility."""
         try:
             for i, co2 in enumerate(st.session_state.co2):
                 if co2['cost_per_ton'] == cost_per_ton:
@@ -611,9 +635,9 @@ class DataManager:
             return False
         except Exception:
             return False
-    
+
     def remove_co2(self, cost_per_ton: float) -> bool:
-        """Remove CO2 configuration."""
+        """Remove CO2 configuration by cost_per_ton - kept for backward compatibility."""
         try:
             st.session_state.co2 = [
                 c for c in st.session_state.co2 
@@ -623,6 +647,7 @@ class DataManager:
             return True
         except Exception:
             return False
+
     
     # Warehouse management
     def add_warehouse(self, warehouse_data: Dict[str, Any]) -> bool:
