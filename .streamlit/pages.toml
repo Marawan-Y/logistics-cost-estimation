@@ -67,3 +67,8 @@ icon = "➕"
 path = "pages/13_Cost_Calculation.py"
 name = "Cost Calculation"
 icon = "🧮"
+
+[[pages]]
+path = "pages/15Conversational_Assistant.py"
+name = "AI Assistant"
+icon = "💬"
