@@ -1,0 +1,124 @@
+{
+  "materials": [
+    {
+      "project_name": "EPS",
+      "material_no": "k298903",
+      "material_desc": "Pre Pressure Sensor",
+      "weight_per_pcs": 0.033,
+      "usage": "2,0",
+      "daily_demand": 320.0,
+      "annual_volume": 80000,
+      "lifetime_volume": 0.0,
+      "peak_year": "",
+      "peak_year_volume": 0,
+      "working_days": 250,
+      "sop": "2026",
+      "Pcs_Price": 0.0
+    }
+  ],
+  "suppliers": [
+    {
+      "vendor_id": "917590",
+      "vendor_name": "Sensata",
+      "vendor_country": "DE",
+      "city_of_manufacture": "Bergkirchen",
+      "vendor_zip": "85232",
+      "delivery_performance": 0.0,
+      "deliveries_per_month": 2
+    }
+  ],
+  "locations": [
+    {
+      "plant": "Aldersbach",
+      "country": "DE",
+      "distance": 150.0
+    }
+  ],
+  "operations": [
+    {
+      "incoterm_code": "EXW",
+      "incoterm_place": "Bergkirchen",
+      "part_class": "C-Part",
+      "calloff_type": "EDI",
+      "directive": "Yes",
+      "lead_time": 30,
+      "subsupplier_used": "No",
+      "subsupplier_box_days": 0,
+      "packaging_tool_owner": "Supplier",
+      "responsible": "CoC",
+      "currency": "EUR"
+    }
+  ],
+  "packaging": [
+    {
+      "pack_maint": 0.0,
+      "empties_scrap": 0.0,
+      "box_type": "KLT6417 / LID",
+      "fill_qty_box": 136,
+      "pallet_type": "EURO Pallet Price",
+      "fill_qty_lu_oversea": 0,
+      "add_pack_price": 10.0,
+      "sp_needed": "No",
+      "sp_type": "Inlay Tray",
+      "fill_qty_tray": 0,
+      "tooling_cost": 0.0,
+      "add_sp_pack": "No",
+      "trays_per_sp_pal": 0,
+      "sp_pallets_per_lu": 0,
+      "loop_data": {
+        "goods receipt": 1,
+        "stock raw materials": 4,
+        "production": 3,
+        "empties return": 3,
+        "cleaning": 2,
+        "dispatch": 1,
+        "empties transit (KB → Supplier)": 1,
+        "empties receipt (at Supplier)": 1,
+        "empties in stock (Supplier)": 2,
+        "production (contrary loop)": 5,
+        "stock finished parts": 5,
+        "dispatch (finished parts)": 1,
+        "transit (Supplier → KB)": 1
+      }
+    }
+  ],
+  "repacking": [
+    {
+      "pcs_weight": "None",
+      "packaging_one_way": "N/A",
+      "packaging_returnable": "N/A"
+    }
+  ],
+  "customs": [],
+  "transport": [
+    {
+      "mode1": "Road",
+      "cost_lu": 0.0,
+      "cost_bonded": 0.0,
+      "stack_factor": "2",
+      "use_bonded_warehouse": false,
+      "auto_calculate": true,
+      "key": "ce754174-7478-44ee-aa0e-5ce5496a9db4"
+    }
+  ],
+  "co2": [
+    {
+      "cost_per_ton": 100.0,
+      "co2_conversion_factor": "3.17"
+    }
+  ],
+  "warehouse": [
+    {
+      "cost_per_loc": 5.0
+    }
+  ],
+  "interest": [],
+  "additional_costs": [],
+  "settings": {
+    "auto_save": true
+  },
+  "metadata": {
+    "save_timestamp": "2025-09-23T13:23:46.739950",
+    "version": "1.0.0"
+  }
+}
