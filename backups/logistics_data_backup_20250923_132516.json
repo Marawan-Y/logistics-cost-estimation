@@ -243,20 +243,7 @@
       "packaging_returnable": "N/A"
     }
   ],
-  "customs": [
-    {
-      "pref_usage": "Yes",
-      "duty_rate": 0.0
-    },
-    {
-      "pref_usage": "No",
-      "duty_rate": 0.0
-    },
-    {
-      "pref_usage": "Yes",
-      "duty_rate": 0.0
-    }
-  ],
+  "customs": [],
   "transport": [
     {
       "mode1": "Road",
@@ -325,7 +312,7 @@
     "auto_save": true
   },
   "metadata": {
-    "save_timestamp": "2025-09-16T13:11:48.824025",
+    "save_timestamp": "2025-09-23T13:25:16.738308",
     "version": "1.0.0"
   }
 }

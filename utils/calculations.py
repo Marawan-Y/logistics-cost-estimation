@@ -691,28 +691,23 @@ class LogisticsCostCalculator:
             self.calculation_errors.append(f"Tariff cost error: {e}")
             return 0
 
-    def customs_cost_per_piece(self, material, customs_config, transport_config, packaging_config, operations_config):
+    def customs_cost_per_piece(self, material, duty_rate_percent, transport_config, packaging_config, operations_config):
         """
-        X3 = customs cost per piece = duty + tariff (with preference)
+        X3 = customs cost per piece using direct duty rate input
         """
         try:
-            if not customs_config:
-                return 0
-
-            use_pref = customs_config.get('pref_usage', 'No')
-
-            if use_pref == 'No':
-                dc = self.duty_cost_per_piece(material, customs_config, transport_config, packaging_config, operations_config)
-                tc = self.tariff_cost_per_piece(material, customs_config)
-
-                customs_cost = math.ceil((dc + tc) * 1000) / 1000
-                return customs_cost
-            else:
+            if not duty_rate_percent or duty_rate_percent <= 0:
                 return 0.0
 
+            Pcs_Price = material.get('Pcs_Price', 0)
+            dr = duty_rate_percent / 100.0
+            tp_per_piece = self.transport_cost_per_piece(transport_config, packaging_config, operations_config)
+
+            dc = dr * (Pcs_Price + tp_per_piece)
+            return max(dc, 0)
         except Exception as e:
-            self.calculation_errors.append(f"Customs cost error: {e}")
-            return 0.0
+            self.calculation_errors.append(f"Duty cost error: {e}")
+            return 0
 
     # --- Warehouse-level calculations -----------------------------------------
     def SP_Filling_Qty_Pcs_lu(self, packaging_config):
@@ -906,8 +901,8 @@ class LogisticsCostCalculator:
         transport_config,
         warehouse_config,
         repacking_config,
-        customs_config,
-        co2_config,
+        duty_rate_percent=0,  # Changed from customs_config to direct rate
+        co2_config=None,
         additional_costs=None,
         operations_config=None,
         location_config=None,
@@ -920,7 +915,7 @@ class LogisticsCostCalculator:
             packaging_cost = self.packaging_cost_per_piece(material, packaging_config, operations_config)
             repacking_cost = self.get_repacking_cost_value(repacking_config)
             customs_cost = self.customs_cost_per_piece(
-                material, customs_config, transport_config, packaging_config, operations_config
+                material, duty_rate_percent, transport_config, packaging_config, operations_config
             )
             transport_cost = self.transport_cost_per_piece(
                 transport_config,
@@ -1086,7 +1081,7 @@ class LogisticsCostCalculator:
                 'repacking_cost_per_piece': repacking_cost,
                 # Customs
                 'customs_cost_per_piece': customs_cost,
-                'Duty Rate (% Of pcs price)': customs_config.get('duty_rate', 0) if customs_config else 0,
+                'Duty Rate (% Of pcs price)': duty_rate_percent,
                 # Transport
                 'transport_cost_per_piece': transport_cost,
                 'Transport type': transport_config.get('mode1'),
@@ -1162,7 +1157,7 @@ class LogisticsCostCalculator:
                     transport_config=transport_config,
                     warehouse_config=warehouse_config,
                     repacking_config=repacking_config,
-                    customs_config=customs_config,
+                    duty_rate_percent=customs_config.get('duty_rate', 0) if customs_config else 0,
                     co2_config=co2_config,
                     additional_costs=additional_costs,
                     operations_config=operations_config,

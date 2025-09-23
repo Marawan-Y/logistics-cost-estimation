@@ -42,8 +42,7 @@ class DataManager:
             st.session_state.packaging = []
         if 'repacking' not in st.session_state:
             st.session_state.repacking = []
-        if 'customs' not in st.session_state:
-            st.session_state.customs = []
+        # REMOVED: customs initialization
         if 'transport' not in st.session_state:
             st.session_state.transport = []
         if 'co2' not in st.session_state:
@@ -87,7 +86,7 @@ class DataManager:
         st.session_state.operations = data.get('operations', [])
         st.session_state.packaging = data.get('packaging', [])
         st.session_state.repacking = data.get('repacking', [])
-        st.session_state.customs = data.get('customs', [])
+        # REMOVED: customs population
         st.session_state.transport = data.get('transport', [])
         st.session_state.co2 = data.get('co2', [])
         st.session_state.warehouse = data.get('warehouse', [])
@@ -108,7 +107,7 @@ class DataManager:
             'operations': st.session_state.operations,
             'packaging': st.session_state.packaging,
             'repacking': st.session_state.repacking,
-            'customs': st.session_state.customs,
+            # REMOVED: customs from data export
             'transport': st.session_state.transport,
             'co2': st.session_state.co2,
             'warehouse': st.session_state.warehouse,
@@ -466,44 +465,7 @@ class DataManager:
         except Exception:
             return False
     
-    # Customs management
-    def add_customs(self, customs_data: Dict[str, Any]) -> bool:
-        """Add a new customs configuration."""
-        try:
-            st.session_state.customs.append(customs_data)
-            self._save_data_automatically()
-            return True
-        except Exception:
-            return False
-
-    def get_customs(self) -> List[Dict[str, Any]]:
-        """Get all customs configurations."""
-        return st.session_state.customs
-
-    def update_customs(self, index: int, updated_data: Dict[str, Any]) -> bool:
-        """Update customs configuration by its index."""
-        try:
-            if 0 <= index < len(st.session_state.customs):
-                st.session_state.customs[index] = updated_data
-                self._save_data_automatically()
-                return True
-            return False
-        except Exception:
-            return False
-
-    def remove_customs(self, index: int) -> bool:
-        """Remove customs configuration by its index."""
-        try:
-            # Mirror transport: rebuild the list minus the one at `index`
-            st.session_state.customs = [
-                c for idx, c in enumerate(st.session_state.customs)
-                if idx != index
-            ]
-            self._save_data_automatically()
-            return True
-        except Exception:
-            return False
-
+    # REMOVED: All customs management methods
     
     # Transport management
     def add_transport(self, transport_data: Dict[str, Any]) -> bool:
@@ -583,7 +545,6 @@ class DataManager:
             return False
 
     # CO2 management
-
     def add_co2(self, co2_data: Dict[str, Any]) -> bool:
         """Add CO2 configuration - now supports multiple configurations."""
         try:
@@ -775,6 +736,23 @@ class DataManager:
         except Exception:
             return False
     
+    # Database management methods
+    def get_packaging_database_path(self) -> Path:
+        """Get the path for packaging database file"""
+        return Path("packaging_database.json")
+
+    def has_packaging_database(self) -> bool:
+        """Check if packaging database exists"""
+        return self.get_packaging_database_path().exists()
+
+    def get_repacking_database_path(self) -> Path:
+        """Get the path for repacking database file"""
+        return Path("repacking_database.json")
+
+    def has_repacking_database(self) -> bool:
+        """Check if repacking database exists"""
+        return self.get_repacking_database_path().exists()
+    
     # Utility methods
     def is_calculation_ready(self) -> bool:
         """Check if all required data is configured for calculations."""
@@ -785,7 +763,7 @@ class DataManager:
         if not (materials and suppliers):
             return False
         
-        # Need at least basic configurations
+        # Need at least basic configurations (REMOVED customs requirement)
         packaging_configs = st.session_state.packaging
         transport_configs = st.session_state.transport
         warehouse_configs = st.session_state.warehouse
@@ -822,7 +800,7 @@ class DataManager:
             st.session_state.operations = []
             st.session_state.packaging = []
             st.session_state.repacking = []
-            st.session_state.customs = []
+            # REMOVED: customs clearing
             st.session_state.transport = []
             st.session_state.co2 = []
             st.session_state.warehouse = []
@@ -861,7 +839,7 @@ class DataManager:
             'total_operations': len(st.session_state.operations),
             'total_packaging': len(st.session_state.packaging),
             'total_repacking': len(st.session_state.repacking),
-            'total_customs': len(st.session_state.customs),
+            # REMOVED: 'total_customs': len(st.session_state.customs),
             'total_transport': len(st.session_state.transport),
             'total_co2': len(st.session_state.co2),
             'total_warehouse': len(st.session_state.warehouse),

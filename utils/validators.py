@@ -318,6 +318,76 @@ class OperationsValidator(BaseValidator):
             'errors': errors
         }
 
+class PackagingDatabaseValidator(BaseValidator):
+    """Validator for packaging database entries."""
+    
+    def validate_standard_box(self, box_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate standard box data."""
+        errors = []
+        
+        # Box ID validation
+        box_id = box_data.get('box_id', '').strip()
+        if self.is_empty_or_none(box_id):
+            errors.append("Box ID is required")
+        elif len(box_id) > 50:
+            errors.append("Box ID must be 50 characters or less")
+            
+        # Box Type validation
+        box_type = box_data.get('box_type', '').strip()
+        if self.is_empty_or_none(box_type):
+            errors.append("Box Type is required")
+        elif len(box_type) > 100:
+            errors.append("Box Type must be 100 characters or less")
+        
+        # Dimensions validation
+        length = box_data.get('length')
+        if length is not None and not self.is_positive_number(length):
+            errors.append("Length must be a positive number")
+            
+        width = box_data.get('width')
+        if width is not None and not self.is_positive_number(width):
+            errors.append("Width must be a positive number")
+            
+        height = box_data.get('height')
+        if height is not None and not self.is_positive_number(height):
+            errors.append("Height must be a positive number")
+        
+        # Cost validations
+        cost_per_pcs = box_data.get('Cost_per_pcs')
+        if cost_per_pcs is not None and not self.is_positive_number(cost_per_pcs, allow_zero=True):
+            errors.append("Cost per piece must be a non-negative number")
+        
+        return {
+            'is_valid': len(errors) == 0,
+            'errors': errors
+        }
+    
+    def validate_special_box(self, special_box_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate special box data."""
+        errors = []
+        
+        # Special Box Type validation
+        box_type = special_box_data.get('sp_type', '').strip()
+        if self.is_empty_or_none(box_type):
+            errors.append("Special Box Type is required")
+        elif len(box_type) > 100:
+            errors.append("Special Box Type must be 100 characters or less")
+        
+        # Cost validations
+        tooling_cost = special_box_data.get('tooling_cost')
+        if tooling_cost is not None and not self.is_positive_number(tooling_cost, allow_zero=True):
+            errors.append("Tooling cost must be a non-negative number")
+        
+        fill_qty_tray = special_box_data.get('fill_qty_tray')
+        if fill_qty_tray is not None and not self.is_positive_integer(fill_qty_tray):
+            errors.append("Fill quantity per tray must be a positive integer")
+        
+        return {
+            'is_valid': len(errors) == 0,
+            'errors': errors
+        }
+
+
 class PackagingValidator(BaseValidator):
     """Validator for packaging configuration - matching 6_Packaging_Cost.py"""
     
@@ -404,6 +474,48 @@ class PackagingValidator(BaseValidator):
             'errors': errors
         }
 
+class RepackingDatabaseValidator(BaseValidator):
+    """Validator for repacking database entries."""
+    
+    def validate_repacking_config(self, config_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate repacking configuration data."""
+        errors = []
+        
+        # Weight Range validation
+        weight_range = config_data.get('weight_range', '').strip()
+        if self.is_empty_or_none(weight_range):
+            errors.append("Weight range is required")
+        elif len(weight_range) > 100:
+            errors.append("Weight range must be 100 characters or less")
+        
+        # Packaging Types validation
+        one_way_type = config_data.get('one_way_type', '').strip()
+        if self.is_empty_or_none(one_way_type):
+            errors.append("One-way packaging type is required")
+        elif len(one_way_type) > 100:
+            errors.append("One-way packaging type must be 100 characters or less")
+        
+        returnable_type = config_data.get('returnable_type', '').strip()
+        if self.is_empty_or_none(returnable_type):
+            errors.append("Returnable packaging type is required")
+        elif len(returnable_type) > 100:
+            errors.append("Returnable packaging type must be 100 characters or less")
+        
+        # Cost validations
+        labor_cost = config_data.get('labor_cost')
+        if labor_cost is not None and not self.is_positive_number(labor_cost, allow_zero=True):
+            errors.append("Labor cost must be a non-negative number")
+        
+        handling_cost = config_data.get('handling_cost')
+        if handling_cost is not None and not self.is_positive_number(handling_cost, allow_zero=True):
+            errors.append("Handling cost must be a non-negative number")
+        
+        return {
+            'is_valid': len(errors) == 0,
+            'errors': errors
+        }
+
+
 class RepackingValidator(BaseValidator):
     """Validator for repacking configuration - matching updated 7_Repacking_Cost.py"""
 
@@ -467,24 +579,6 @@ class RepackingValidator(BaseValidator):
         }
 
 
-class CustomsValidator(BaseValidator):
-    """Validator for customs configuration - matching 8_Customs_Cost.py"""
-    def validate_customs(self, customs_data: Dict[str, Any]) -> Dict[str, Any]:
-        errors = []
-        pref_usage = customs_data.get('pref_usage', '').strip()
-        if not pref_usage:
-            errors.append("Customs Preference Usage is required")
-        elif pref_usage not in ['Yes', 'No']:
-            errors.append("Customs Preference Usage must be Yes or No")
-
-        # Duty rate only required when preference not used
-        if pref_usage == 'No':
-            duty_rate = customs_data.get('duty_rate')
-            if duty_rate is None:
-                errors.append("Duty Rate is required when no preference is used")
-            elif not self.is_valid_percentage(duty_rate):
-                errors.append("Duty Rate must be between 0 and 100 percent")
-        return {'is_valid': len(errors) == 0, 'errors': errors}
 
 
 class TransportValidator(BaseValidator):
