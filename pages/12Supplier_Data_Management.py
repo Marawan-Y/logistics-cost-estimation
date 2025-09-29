@@ -10,12 +10,10 @@ st.set_page_config(page_title="Supplier Data Management", page_icon="🏭", layo
 
 # --- helper: normalize a supplier record to guarantee required keys exist ---
 def normalize_supplier_record(s: dict) -> dict:
+    """Normalize supplier record to ensure all required keys exist with proper names"""
     s = dict(s or {})
-    # support legacy alt key names (if any)
-    if 'kb_country' in s and 'country' not in s:
-        s['country'] = s.get('kb_country')
-
-    # fill required keys with safe defaults
+    
+    # Fill required keys with safe defaults - using CORRECT key names
     defaults = {
         'vendor_id': '',
         'vendor_zip': '',
@@ -24,14 +22,16 @@ def normalize_supplier_record(s: dict) -> dict:
         'city_of_manufacture': '',
         'delivery_performance': 0.0,
         'deliveries_per_month': 0,
-        'plant': '',        # <--- avoid KeyError
-        'distance': 0.0,    # <--- avoid KeyError
-        'country': '',      # <--- avoid KeyError
+        'plant': '',        # KB/Bendix plant
+        'country': '',      # KB/Bendix country
+        'distance': 0.0,
     }
+    
     for k, v in defaults.items():
         if k not in s or s[k] is None:
             s[k] = v
-    # coerce numerics
+    
+    # Coerce numerics
     try:
         s['delivery_performance'] = float(s.get('delivery_performance', 0.0) or 0.0)
     except Exception:
@@ -44,6 +44,7 @@ def normalize_supplier_record(s: dict) -> dict:
         s['distance'] = float(s.get('distance', 0.0) or 0.0)
     except Exception:
         s['distance'] = 0.0
+    
     return s
 
 def main():
@@ -64,11 +65,13 @@ def main():
     data_manager = st.session_state.data_manager
     supplier_db = st.session_state.supplier_db
     
-    # Sync with current supplier configurations
-    supplier_db.sync_with_configurations(data_manager.get_suppliers())
-    supplier_db.save_to_json('supplier_database.json')
+    # Auto-sync with current supplier configurations on page load
+    current_suppliers = data_manager.get_suppliers()
+    if current_suppliers:
+        supplier_db.sync_with_configurations(current_suppliers)
+        supplier_db.save_to_json('supplier_database.json')
     
-    tab1, tab2, tab3, tab4 = st.tabs(["📊 View Database", "➕ Add/Edit Supplier", "📁 Import/Export", "🔍 Search & Filter"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 View Database", "➕ Add/Edit/Delete Supplier", "📁 Import/Export", "🔍 Search & Filter"])
     
     # Tab 1: View Database
     with tab1:
@@ -107,11 +110,11 @@ def main():
         else:
             st.warning("No supplier data loaded. Please add suppliers in Supplier Information page or import data.")
     
-    # Tab 2: Add/Edit Supplier
+    # Tab 2: Add/Edit/Delete Supplier (MATCHING PACKAGING STYLE)
     with tab2:
-        st.subheader("Add or Edit Supplier")
+        st.subheader("Add, Edit, or Delete Supplier")
         
-        action = st.radio("Select Action", ["Add New Supplier", "Edit Existing Supplier"], horizontal=True)
+        action = st.radio("Select Action", ["Add New Supplier", "Edit Existing Supplier", "Delete Supplier", "Import Current Configuration"], horizontal=True)
         
         if action == "Add New Supplier":
             with st.form("add_supplier_form"):
@@ -139,7 +142,7 @@ def main():
                     if not vendor_id or not vendor_name:
                         st.error("Vendor ID and Vendor Name are required")
                     elif supplier_db.supplier_exists(vendor_id):
-                        st.error(f"Supplier {vendor_id} already exists in database")
+                        st.error(f"⚠️ The supplier data already exists for Vendor ID: {vendor_id}")
                     else:
                         supplier_data = normalize_supplier_record({
                             'vendor_id': vendor_id,
@@ -157,7 +160,8 @@ def main():
                         supplier_db.save_to_json('supplier_database.json')
                         st.success(f"Supplier {vendor_id} added successfully!")
                         st.rerun()
-        else:
+        
+        elif action == "Edit Existing Supplier":
             existing_suppliers = list(supplier_db.database.keys())
             if not existing_suppliers:
                 st.warning("No suppliers in database to edit.")
@@ -201,34 +205,142 @@ def main():
                             min_value=0.0, step=0.1
                         )
                     
-                    colA, colB = st.columns(2)
-                    with colA:
-                        if st.form_submit_button("Update Supplier", type="primary"):
-                            updated_data = normalize_supplier_record({
-                                'vendor_id': selected_supplier_id,
-                                'vendor_name': vendor_name,
-                                'vendor_country': vendor_country,
-                                'city_of_manufacture': city_of_manufacture,
-                                'vendor_zip': vendor_zip,
-                                'delivery_performance': delivery_performance,
-                                'deliveries_per_month': deliveries_per_month,
-                                'plant': plant_val,
-                                'country': country_val,
-                                'distance': distance
-                            })
-                            supplier_db.update_supplier(selected_supplier_id, updated_data)
-                            supplier_db.save_to_json('supplier_database.json')
-                            st.success(f"Supplier {selected_supplier_id} updated successfully!")
-                            st.rerun()
-                    with colB:
-                        if st.form_submit_button("Cancel"):
-                            st.rerun()
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        submit_button = st.form_submit_button("Update Supplier", type="primary")
+                    with col2:
+                        cancel_button = st.form_submit_button("Cancel")
+                    
+                    # Handle form submission
+                    if submit_button:
+                        updated_data = normalize_supplier_record({
+                            'vendor_id': selected_supplier_id,
+                            'vendor_name': vendor_name,
+                            'vendor_country': vendor_country,
+                            'city_of_manufacture': city_of_manufacture,
+                            'vendor_zip': vendor_zip,
+                            'delivery_performance': delivery_performance,
+                            'deliveries_per_month': deliveries_per_month,
+                            'plant': plant_val,
+                            'country': country_val,
+                            'distance': distance
+                        })
+                        # Update in database
+                        supplier_db.update_supplier(selected_supplier_id, updated_data)
+                        supplier_db.save_to_json('supplier_database.json')
+                        
+                        # Also update in data_manager if it exists there
+                        if data_manager.supplier_exists(selected_supplier_id):
+                            data_manager.update_supplier(selected_supplier_id, updated_data)
+                        
+                        st.success(f"Supplier {selected_supplier_id} updated successfully!")
+                        st.rerun()
+                    
+                    if cancel_button:
+                        st.rerun()
+        
+        elif action == "Delete Supplier":
+            existing_suppliers = list(supplier_db.database.keys())
+            if not existing_suppliers:
+                st.warning("No suppliers in database to delete.")
+            else:
+                selected_supplier_id = st.selectbox(
+                    "Select Supplier to Delete",
+                    existing_suppliers,
+                    format_func=lambda x: f"{x} - {supplier_db.database[x].get('vendor_name', '')}",
+                    key="delete_supplier_select"
+                )
+                
+                st.warning(f"⚠️ You are about to delete: **{selected_supplier_id} - {supplier_db.database[selected_supplier_id].get('vendor_name', '')}**")
+                st.info("This action cannot be undone. Make sure you have a backup if needed.")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("🗑️ Confirm Delete", type="secondary", use_container_width=True):
+                        supplier_db.remove_supplier(selected_supplier_id)
+                        supplier_db.save_to_json('supplier_database.json')
+                        st.success(f"Supplier {selected_supplier_id} deleted successfully!")
+                        st.rerun()
+                
+                with col2:
+                    if st.button("Cancel", use_container_width=True):
+                        st.rerun()
+        
+        else:  # Import Current Configuration
+            st.markdown("### Import Current Supplier Configuration")
+            st.info("This will import all suppliers from the Supplier Information page into the database.")
+            
+            current_suppliers = data_manager.get_suppliers()
+            
+            if not current_suppliers:
+                st.warning("No suppliers found in current configuration. Please add suppliers in the Supplier Information page first.")
+            else:
+                st.write(f"**Found {len(current_suppliers)} supplier(s) in current configuration:**")
+                
+                # Preview suppliers to be imported
+                preview_data = []
+                for sup in current_suppliers:
+                    preview_data.append({
+                        'Vendor ID': sup.get('vendor_id', ''),
+                        'Vendor Name': sup.get('vendor_name', ''),
+                        'Country': sup.get('vendor_country', ''),
+                        'Plant': sup.get('plant', ''),
+                        'KB Country': sup.get('country', '')
+                    })
+                
+                df_preview = pd.DataFrame(preview_data)
+                st.dataframe(df_preview, use_container_width=True)
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("📥 Import All Suppliers", type="primary", use_container_width=True):
+                        imported_count = 0
+                        skipped_count = 0
+                        
+                        for sup in current_suppliers:
+                            vendor_id = sup.get('vendor_id', '')
+                            if vendor_id:
+                                if supplier_db.supplier_exists(vendor_id):
+                                    skipped_count += 1
+                                else:
+                                    # Ensure we use the correct key names
+                                    supplier_data = normalize_supplier_record({
+                                        'vendor_id': sup.get('vendor_id', ''),
+                                        'vendor_name': sup.get('vendor_name', ''),
+                                        'vendor_country': sup.get('vendor_country', ''),
+                                        'city_of_manufacture': sup.get('city_of_manufacture', ''),
+                                        'vendor_zip': sup.get('vendor_zip', ''),
+                                        'delivery_performance': sup.get('delivery_performance', 0.0),
+                                        'deliveries_per_month': sup.get('deliveries_per_month', 0),
+                                        'plant': sup.get('plant', ''),
+                                        'country': sup.get('country', ''),
+                                        'distance': sup.get('distance', 0.0)
+                                    })
+                                    supplier_db.add_supplier(vendor_id, supplier_data)
+                                    imported_count += 1
+                        
+                        supplier_db.save_to_json('supplier_database.json')
+                        
+                        if imported_count > 0:
+                            st.success(f"✅ Successfully imported {imported_count} supplier(s)!")
+                        if skipped_count > 0:
+                            st.info(f"ℹ️ Skipped {skipped_count} duplicate supplier(s)")
+                        
+                        st.rerun()
+                
+                with col2:
+                    if st.button("🔄 Sync & Overwrite Existing", use_container_width=True):
+                        supplier_db.sync_with_configurations(current_suppliers)
+                        supplier_db.save_to_json('supplier_database.json')
+                        st.success(f"✅ Synced all {len(current_suppliers)} supplier(s)!")
+                        st.rerun()
     
     # Tab 3: Import/Export
     with tab3:
         st.subheader("Import/Export Supplier Data")
         
         col1, col2 = st.columns(2)
+        
         with col1:
             st.markdown("### Import Data")
             upload_type = st.radio("Import format:", ["JSON (Database Format)", "CSV"])

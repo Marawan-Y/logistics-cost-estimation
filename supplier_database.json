@@ -8,13 +8,13 @@
       "vendor_zip": "51709",
       "delivery_performance": 0.0,
       "deliveries_per_month": 10,
-      "kb_plant": "",
-      "kb_country": "",
+      "plant": "Aldersbach",
+      "country": "DE",
       "distance": 600.0
     }
   },
   "metadata": {
-    "save_timestamp": "2025-09-29T12:07:07.262123",
+    "save_timestamp": "2025-09-29T13:42:25.671963",
     "version": "1.0.0",
     "total_suppliers": 1
   }

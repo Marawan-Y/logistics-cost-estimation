@@ -29,6 +29,18 @@
       "plant": "Aldersbach",
       "country": "DE",
       "distance": 600.0
+    },
+    {
+      "vendor_id": "a",
+      "vendor_name": "a",
+      "vendor_country": "a",
+      "city_of_manufacture": "a",
+      "vendor_zip": "a",
+      "delivery_performance": 0.0,
+      "deliveries_per_month": 2,
+      "plant": "a",
+      "country": "a",
+      "distance": 2.0
     }
   ],
   "operations": [
@@ -115,7 +127,7 @@
     "auto_save": true
   },
   "metadata": {
-    "save_timestamp": "2025-09-29T13:41:50.268129",
+    "save_timestamp": "2025-09-29T13:40:25.139416",
     "version": "1.0.0"
   }
 }

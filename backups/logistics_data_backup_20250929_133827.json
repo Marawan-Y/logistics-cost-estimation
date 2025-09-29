@@ -26,12 +26,11 @@
       "vendor_zip": "51709",
       "delivery_performance": 0.0,
       "deliveries_per_month": 10,
-      "plant": "Aldersbach",
+      "plant": "Aldersbacha",
       "country": "DE",
       "distance": 600.0
     }
   ],
-  "locations": [],
   "operations": [
     {
       "incoterm_code": "FCA",
@@ -80,17 +79,43 @@
       }
     }
   ],
-  "repacking": [],
-  "transport": [],
-  "co2": [],
-  "warehouse": [],
+  "repacking": [
+    {
+      "pcs_weight": "None",
+      "packaging_one_way": "Bulk (poss. in bag) in cardboard/wooden box",
+      "packaging_returnable": "N/A"
+    }
+  ],
+  "transport": [
+    {
+      "mode1": "Road",
+      "cost_lu": 37.82,
+      "cost_bonded": 0.0,
+      "stack_factor": "2",
+      "use_bonded_warehouse": false,
+      "auto_calculate": false,
+      "key": "739ad339-61b2-44f9-a50e-a87334c4ee26"
+    }
+  ],
+  "co2": [
+    {
+      "cost_per_ton": 100.0,
+      "co2_conversion_factor": 3.17,
+      "description": ""
+    }
+  ],
+  "warehouse": [
+    {
+      "cost_per_loc": 5.0
+    }
+  ],
   "interest": [],
   "additional_costs": [],
   "settings": {
     "auto_save": true
   },
   "metadata": {
-    "save_timestamp": "2025-09-29T10:47:00.612021",
+    "save_timestamp": "2025-09-29T13:38:19.022410",
     "version": "1.0.0"
   }
 }

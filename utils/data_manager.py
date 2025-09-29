@@ -1,4 +1,98 @@
 """
+Minimal DataManager stub
+=======================
+
+This module provides a pared‑down version of the ``DataManager`` class used by
+the logistics cost estimation application.  The original repository defines a
+rich set of methods and persistent storage mechanisms to manage materials,
+suppliers, packaging, transport and other cost categories.  In this simplified
+implementation we focus solely on the portions required by the modified
+Supplier and Transport Data Management pages:
+
+* Supplier functions: retrieving the list of suppliers, checking for existing
+  vendor identifiers, and adding/updating/removing supplier records.
+* Transport functions: retrieving, adding, updating and removing transport
+  lane definitions.
+
+All data is stored in Streamlit's ``st.session_state`` to persist across
+callbacks during a single user session.  This stub does not implement
+automatic saving to or loading from JSON files; those concerns are handled
+within the individual pages or by the full DataManager in the original
+application.
+
+If additional functionality (e.g. materials or packaging) is required it can
+be added here by following the same pattern: initialise the key in
+``session_state`` and provide getter/add/update/delete methods.
+"""
+
+from __future__ import annotations
+
+import streamlit as st
+from typing import Any, Dict, List
+
+
+class DataManager:
+    """A minimal session‑based data manager for supplier and transport data."""
+
+    def __init__(self) -> None:
+        # Initialise session state keys if they don't exist
+        if 'suppliers' not in st.session_state:
+            st.session_state.suppliers: List[Dict[str, Any]] = []
+        if 'transport' not in st.session_state:
+            st.session_state.transport: List[Dict[str, Any]] = []
+
+    # ------------------------------------------------------------------
+    # Supplier methods
+    # ------------------------------------------------------------------
+    def get_suppliers(self) -> List[Dict[str, Any]]:
+        """Return the list of supplier configurations."""
+        return st.session_state.suppliers
+
+    def supplier_exists(self, vendor_id: str) -> bool:
+        """Check if a supplier with the given vendor_id already exists."""
+        return any(s.get('vendor_id') == vendor_id for s in st.session_state.suppliers)
+
+    def add_supplier(self, supplier_data: Dict[str, Any]) -> None:
+        """Add a new supplier configuration to session state."""
+        st.session_state.suppliers.append(supplier_data)
+
+    def update_supplier(self, vendor_id: str, updated_data: Dict[str, Any]) -> None:
+        """Update an existing supplier configuration."""
+        for i, supplier in enumerate(st.session_state.suppliers):
+            if supplier.get('vendor_id') == vendor_id:
+                st.session_state.suppliers[i] = updated_data
+                break
+
+    def remove_supplier(self, vendor_id: str) -> None:
+        """Remove a supplier configuration from session state."""
+        st.session_state.suppliers = [
+            s for s in st.session_state.suppliers if s.get('vendor_id') != vendor_id
+        ]
+
+    # ------------------------------------------------------------------
+    # Transport methods
+    # ------------------------------------------------------------------
+    def get_transport(self) -> List[Dict[str, Any]]:
+        """Return the list of transport lane configurations."""
+        return st.session_state.transport
+
+    def add_transport(self, lane_data: Dict[str, Any]) -> None:
+        """Add a new transport lane configuration."""
+        st.session_state.transport.append(lane_data)
+
+    def update_transport(self, lane_id: str, updated_lane: Dict[str, Any]) -> None:
+        """Update an existing transport lane configuration."""
+        for i, lane in enumerate(st.session_state.transport):
+            if lane.get('lane_id') == lane_id:
+                st.session_state.transport[i] = updated_lane
+                break
+
+    def remove_transport(self, lane_id: str) -> None:
+        """Remove a transport lane configuration from session state."""
+        st.session_state.transport = [
+            l for l in st.session_state.transport if l.get('lane_id') != lane_id
+        ]
+"""
 Data Manager for Logistics Cost Application
 
 This module handles all data storage, retrieval, and management operations
