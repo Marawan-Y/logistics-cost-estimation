@@ -1,4 +1,4 @@
-# pages/15_Transport_Data_Management.py
+# pages/14Transport_Data_Management.py
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -20,7 +20,6 @@ def main():
     
     if 'transport_db' not in st.session_state:
         st.session_state.transport_db = TransportDatabase()
-        # Try to load existing database
         try:
             st.session_state.transport_db.load_from_json('transport_database.json')
         except:
@@ -29,7 +28,7 @@ def main():
     transport_db = st.session_state.transport_db
     
     # Create tabs
-    tab1, tab2, tab3, tab4 = st.tabs(["📊 View Database", "➕ Add/Edit Lane", "📁 Import/Export", "🔍 Search & Filter"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 View Database", "➕ Add/Edit/Delete Lane", "📁 Import/Export", "🔍 Search & Filter"])
     
     # Tab 1: View Database
     with tab1:
@@ -71,7 +70,7 @@ def main():
             # Add horizontal scrolling for the complete table
             st.dataframe(
                 df_display,
-                use_container_width=False,  # Allow horizontal scrolling
+                use_container_width=False,
                 height=600,
                 hide_index=True
             )
@@ -91,155 +90,278 @@ def main():
             with col3:
                 search_text = st.text_input("Search City", "")
             
-            # Apply filters
-            if filter_origin != "All":
-                df_display = df_display[df_display['Origin Country'] == filter_origin]
-            if filter_dest != "All":
-                df_display = df_display[df_display['Dest Country'] == filter_dest]
-            if search_text:
-                mask = (df_display['Origin City'].str.contains(search_text, case=False, na=False) | 
-                       df_display['Dest City'].str.contains(search_text, case=False, na=False))
-                df_display = df_display[mask]
-            
-            # Display with pagination
-            rows_per_page = st.number_input("Rows per page", min_value=10, max_value=100, value=20)
-            total_pages = len(df_display) // rows_per_page + (1 if len(df_display) % rows_per_page > 0 else 0)
-            
-            if 'current_page' not in st.session_state:
-                st.session_state.current_page = 0
-            
-            col1, col2, col3 = st.columns([1, 2, 1])
-            with col1:
-                if st.button("⬅️ Previous", disabled=st.session_state.current_page == 0):
-                    st.session_state.current_page -= 1
-            with col2:
-                st.write(f"Page {st.session_state.current_page + 1} of {max(1, total_pages)}")
-            with col3:
-                if st.button("Next ➡️", disabled=st.session_state.current_page >= total_pages - 1):
-                    st.session_state.current_page += 1
-            
-            # Display current page
-            start_idx = st.session_state.current_page * rows_per_page
-            end_idx = min(start_idx + rows_per_page, len(df_display))
-            
-            st.dataframe(
-                df_display.iloc[start_idx:end_idx],
-                use_container_width=True,
-                height=600
-            )
-            
-            st.info(f"Showing {end_idx - start_idx} of {len(df_display)} total lanes")
+            st.info(f"📊 Showing {len(display_data)} transport lanes")
         else:
             st.warning("No transport data loaded. Please import data in the Import/Export tab.")
     
-    # Tab 2: Add/Edit Lane
+    # Tab 2: Add/Edit/Delete Lane (MATCHING PACKAGING STYLE)
     with tab2:
-        st.subheader("Add or Edit Transport Lane")
+        st.subheader("Add, Edit, or Delete Transport Lane")
         
-        col1, col2 = st.columns(2)
+        # Action selector
+        action = st.radio("Select Action", ["Add New Lane", "Edit Existing Lane", "Delete Lane"], horizontal=True)
         
-        with col1:
-            st.markdown("### Origin Information")
-            origin_country = st.text_input("Origin Country Code *", max_chars=2)
-            origin_zip = st.text_input("Origin Zip Code (2-digit) *", max_chars=5)
-            origin_city = st.text_input("Origin City")
-        
-        with col2:
-            st.markdown("### Destination Information")
-            dest_country = st.text_input("Destination Country Code *", max_chars=2)
-            dest_zip = st.text_input("Destination Zip Code (2-digit) *", max_chars=5)
-            dest_city = st.text_input("Destination City")
-        
-        st.markdown("### Lead Times")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            lead_groupage = st.text_input("Lead Time Groupage", value="2-5")
-        with col2:
-            lead_ltl = st.text_input("Lead Time LTL", value="2-5")
-        with col3:
-            lead_ftl = st.text_input("Lead Time FTL", value="1-3")
-        
-        st.markdown("### Pricing by Weight Cluster")
-        
-        # Create input fields for common weight clusters
-        price_inputs = {}
-        clusters = [50, 75, 100, 150, 200, 300, 500, 750, 1000, 1500, 2000, 3000, 5000, 7500, 10000, 15000, 20000]
-        
-        # Display in rows of 4
-        for i in range(0, len(clusters), 4):
-            cols = st.columns(4)
-            for j, col in enumerate(cols):
-                if i + j < len(clusters):
-                    weight = clusters[i + j]
-                    with col:
-                        price_inputs[weight] = st.number_input(
-                            f"≤ {weight} kg (€)",
-                            min_value=0.0,
-                            step=0.01,
-                            format="%.2f",
-                            key=f"price_{weight}"
-                        )
-        
-        # Full truck price
-        st.markdown("### Special Pricing")
-        col1, col2 = st.columns(2)
-        with col1:
-            full_truck_price = st.text_input("Full Truck Price", value="Contact for price")
-        with col2:
-            fuel_surcharge = st.number_input("Fuel Surcharge (%)", min_value=0.0, max_value=100.0, step=0.01)
-        
-        if st.button("Add/Update Lane", type="primary"):
-            if origin_country and origin_zip and dest_country and dest_zip:
-                # Create new entry
-                new_entry = {
-                    "lane_id": f"{len(transport_db.database) + 1}",
-                    "origin": {
-                        "country": origin_country.upper(),
-                        "zip_code": origin_zip,
-                        "city": origin_city
-                    },
-                    "destination": {
-                        "country": dest_country.upper(),
-                        "zip_code": dest_zip,
-                        "city": dest_city
-                    },
-                    "lane_code": f"{origin_country.upper()}{origin_zip}{dest_country.upper()}{dest_zip}",
-                    "statistics": {
-                        "shipments_per_year": 0,
-                        "weight_per_year": 0,
-                        "avg_shipment_size": 0
-                    },
-                    "lead_time": {
-                        "groupage": lead_groupage,
-                        "ltl": lead_ltl,
-                        "ftl": lead_ftl
-                    },
-                    "prices_by_weight": {k: v for k, v in price_inputs.items() if v > 0},
-                    "full_truck_price": full_truck_price,
-                    "fuel_surcharge": fuel_surcharge
-                }
+        if action == "Add New Lane":
+            lane_name = st.text_input("Lane Identifier *", help="Unique identifier for this lane", key="add_lane_name")
+            
+            with st.form("add_lane_form"):
+                st.markdown("### Add New Transport Lane")
                 
-                # Check if lane exists
-                existing = transport_db.find_lane(origin_country, origin_zip, dest_country, dest_zip)
-                if existing:
-                    # Update existing
-                    for i, entry in enumerate(transport_db.database):
-                        if entry['lane_id'] == existing['lane_id']:
-                            transport_db.database[i] = new_entry
-                            new_entry['lane_id'] = existing['lane_id']
-                            break
-                    st.success("Lane updated successfully!")
-                else:
-                    # Add new
-                    transport_db.database.append(new_entry)
-                    transport_db._build_lane_index()
-                    st.success("New lane added successfully!")
+                col1, col2 = st.columns(2)
                 
-                # Save database
-                transport_db.save_to_json('transport_database.json')
-                st.rerun()
+                with col1:
+                    st.markdown("#### Origin Information")
+                    origin_country = st.text_input("Origin Country Code *", max_chars=2, key="add_origin_country")
+                    origin_zip = st.text_input("Origin Zip Code (2-digit) *", max_chars=5, key="add_origin_zip")
+                    origin_city = st.text_input("Origin City", key="add_origin_city")
+                
+                with col2:
+                    st.markdown("#### Destination Information")
+                    dest_country = st.text_input("Destination Country Code *", max_chars=2, key="add_dest_country")
+                    dest_zip = st.text_input("Destination Zip Code (2-digit) *", max_chars=5, key="add_dest_zip")
+                    dest_city = st.text_input("Destination City", key="add_dest_city")
+                
+                st.markdown("---")
+                st.markdown("### Lead Times")
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    lead_groupage = st.text_input("Lead Time Groupage", value="2-5", key="add_lead_groupage")
+                with col2:
+                    lead_ltl = st.text_input("Lead Time LTL", value="2-5", key="add_lead_ltl")
+                with col3:
+                    lead_ftl = st.text_input("Lead Time FTL", value="1-3", key="add_lead_ftl")
+                
+                st.markdown("---")
+                st.markdown("### Pricing by Weight Cluster")
+                
+                # Create input fields for common weight clusters
+                price_inputs = {}
+                clusters = [50, 75, 100, 150, 200, 300, 500, 750, 1000, 1500, 2000, 3000, 5000, 7500, 10000, 15000, 20000]
+                
+                # Display in rows of 4
+                for i in range(0, len(clusters), 4):
+                    cols = st.columns(4)
+                    for j, col in enumerate(cols):
+                        if i + j < len(clusters):
+                            weight = clusters[i + j]
+                            with col:
+                                price_inputs[weight] = st.number_input(
+                                    f"≤ {weight} kg (€)",
+                                    min_value=0.0,
+                                    step=0.01,
+                                    format="%.2f",
+                                    key=f"add_price_{weight}"
+                                )
+                
+                st.markdown("---")
+                st.markdown("### Special Pricing")
+                col1, col2 = st.columns(2)
+                with col1:
+                    full_truck_price = st.text_input("Full Truck Price", value="Contact for price", key="add_ftl_price")
+                with col2:
+                    fuel_surcharge = st.number_input("Fuel Surcharge (%)", min_value=0.0, max_value=100.0, step=0.01, key="add_fuel")
+                
+                submitted = st.form_submit_button("Add Lane", type="primary")
+                
+                if submitted:
+                    if origin_country and origin_zip and dest_country and dest_zip and lane_name:
+                        # Create new entry
+                        new_entry = {
+                            "lane_id": lane_name,
+                            "origin": {
+                                "country": origin_country.upper(),
+                                "zip_code": origin_zip,
+                                "city": origin_city
+                            },
+                            "destination": {
+                                "country": dest_country.upper(),
+                                "zip_code": dest_zip,
+                                "city": dest_city
+                            },
+                            "lane_code": f"{origin_country.upper()}{origin_zip}{dest_country.upper()}{dest_zip}",
+                            "statistics": {
+                                "shipments_per_year": 0,
+                                "weight_per_year": 0,
+                                "avg_shipment_size": 0
+                            },
+                            "lead_time": {
+                                "groupage": lead_groupage,
+                                "ltl": lead_ltl,
+                                "ftl": lead_ftl
+                            },
+                            "prices_by_weight": {k: v for k, v in price_inputs.items() if v > 0},
+                            "full_truck_price": full_truck_price,
+                            "fuel_surcharge": fuel_surcharge
+                        }
+                        
+                        # Check if lane exists
+                        existing = transport_db.find_lane(origin_country, origin_zip, dest_country, dest_zip)
+                        if existing:
+                            st.error(f"Lane already exists: {existing['lane_code']}")
+                        else:
+                            # Add new
+                            transport_db.database.append(new_entry)
+                            transport_db._build_lane_index()
+                            transport_db.save_to_json('transport_database.json')
+                            st.success("New lane added successfully!")
+                            st.rerun()
+                    else:
+                        st.error("Please fill in all required fields marked with *")
+        
+        elif action == "Edit Existing Lane":
+            # Get existing lanes
+            existing_lanes = transport_db.database
+            
+            if not existing_lanes:
+                st.warning("No lanes available to edit.")
             else:
-                st.error("Please fill in all required fields marked with *")
+                # Create lane labels for selection
+                lane_labels = []
+                for entry in existing_lanes:
+                    label = f"{entry['lane_id']}: {entry['origin']['country']}{entry['origin']['zip_code']} → {entry['destination']['country']}{entry['destination']['zip_code']}"
+                    lane_labels.append(label)
+                
+                selected_lane_label = st.selectbox("Select Lane to Edit", lane_labels, key="edit_lane_select")
+                selected_lane_index = lane_labels.index(selected_lane_label)
+                selected_lane = existing_lanes[selected_lane_index]
+                
+                with st.form("edit_lane_form"):
+                    st.markdown(f"### Editing Lane: {selected_lane['lane_id']}")
+                    
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.markdown("#### Origin Information")
+                        new_origin_country = st.text_input("Origin Country Code", value=selected_lane['origin']['country'], max_chars=2, key="edit_origin_country")
+                        new_origin_zip = st.text_input("Origin Zip Code", value=selected_lane['origin']['zip_code'], max_chars=5, key="edit_origin_zip")
+                        new_origin_city = st.text_input("Origin City", value=selected_lane['origin']['city'], key="edit_origin_city")
+                    
+                    with col2:
+                        st.markdown("#### Destination Information")
+                        new_dest_country = st.text_input("Destination Country Code", value=selected_lane['destination']['country'], max_chars=2, key="edit_dest_country")
+                        new_dest_zip = st.text_input("Destination Zip Code", value=selected_lane['destination']['zip_code'], max_chars=5, key="edit_dest_zip")
+                        new_dest_city = st.text_input("Destination City", value=selected_lane['destination']['city'], key="edit_dest_city")
+                    
+                    st.markdown("---")
+                    st.markdown("### Lead Times")
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        new_lead_groupage = st.text_input("Lead Time Groupage", value=selected_lane['lead_time']['groupage'], key="edit_lead_groupage")
+                    with col2:
+                        new_lead_ltl = st.text_input("Lead Time LTL", value=selected_lane['lead_time']['ltl'], key="edit_lead_ltl")
+                    with col3:
+                        new_lead_ftl = st.text_input("Lead Time FTL", value=selected_lane['lead_time']['ftl'], key="edit_lead_ftl")
+                    
+                    st.markdown("---")
+                    st.markdown("### Pricing by Weight Cluster")
+                    
+                    # Create input fields for weight clusters
+                    new_price_inputs = {}
+                    clusters = [50, 75, 100, 150, 200, 300, 500, 750, 1000, 1500, 2000, 3000, 5000, 7500, 10000, 15000, 20000]
+                    
+                    for i in range(0, len(clusters), 4):
+                        cols = st.columns(4)
+                        for j, col in enumerate(cols):
+                            if i + j < len(clusters):
+                                weight = clusters[i + j]
+                                current_price = selected_lane['prices_by_weight'].get(float(weight), 0.0)
+                                with col:
+                                    new_price_inputs[weight] = st.number_input(
+                                        f"≤ {weight} kg (€)",
+                                        value=float(current_price),
+                                        min_value=0.0,
+                                        step=0.01,
+                                        format="%.2f",
+                                        key=f"edit_price_{weight}"
+                                    )
+                    
+                    st.markdown("---")
+                    st.markdown("### Special Pricing")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        new_full_truck_price = st.text_input("Full Truck Price", value=str(selected_lane.get('full_truck_price', '')), key="edit_ftl_price")
+                    with col2:
+                        # FIX: Handle None values properly
+                        fuel_surcharge_value = selected_lane.get('fuel_surcharge', 0)
+                        if fuel_surcharge_value is None:
+                            fuel_surcharge_value = 0.0
+                        new_fuel_surcharge = st.number_input("Fuel Surcharge (%)", value=float(fuel_surcharge_value), min_value=0.0, max_value=100.0, step=0.01, key="edit_fuel")
+                    
+                    st.markdown("---")
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        submit_update = st.form_submit_button("Update Lane", type="primary")
+                    
+                    with col2:
+                        cancel_update = st.form_submit_button("Cancel")
+                    
+                    # Handle form submission
+                    if submit_update:
+                        updated_entry = {
+                            "lane_id": selected_lane['lane_id'],
+                            "origin": {
+                                "country": new_origin_country.upper(),
+                                "zip_code": new_origin_zip,
+                                "city": new_origin_city
+                            },
+                            "destination": {
+                                "country": new_dest_country.upper(),
+                                "zip_code": new_dest_zip,
+                                "city": new_dest_city
+                            },
+                            "lane_code": f"{new_origin_country.upper()}{new_origin_zip}{new_dest_country.upper()}{new_dest_zip}",
+                            "statistics": selected_lane.get('statistics', {"shipments_per_year": 0, "weight_per_year": 0, "avg_shipment_size": 0}),
+                            "lead_time": {
+                                "groupage": new_lead_groupage,
+                                "ltl": new_lead_ltl,
+                                "ftl": new_lead_ftl
+                            },
+                            "prices_by_weight": {k: v for k, v in new_price_inputs.items() if v > 0},
+                            "full_truck_price": new_full_truck_price,
+                            "fuel_surcharge": new_fuel_surcharge
+                        }
+                        
+                        transport_db.database[selected_lane_index] = updated_entry
+                        transport_db._build_lane_index()
+                        transport_db.save_to_json('transport_database.json')
+                        st.success("Lane updated successfully!")
+                        st.rerun()
+                    
+                    if cancel_update:
+                        st.rerun()
+        
+        else:  # Delete Lane
+            existing_lanes = transport_db.database
+            
+            if not existing_lanes:
+                st.warning("No lanes available to delete.")
+            else:
+                # Create lane labels for selection
+                lane_labels = []
+                for entry in existing_lanes:
+                    label = f"{entry['lane_id']}: {entry['origin']['country']}{entry['origin']['zip_code']} → {entry['destination']['country']}{entry['destination']['zip_code']}"
+                    lane_labels.append(label)
+                
+                selected_lane_label = st.selectbox("Select Lane to Delete", lane_labels, key="delete_lane_select")
+                selected_lane_index = lane_labels.index(selected_lane_label)
+                selected_lane = existing_lanes[selected_lane_index]
+                
+                st.warning(f"⚠️ You are about to delete: **{selected_lane_label}**")
+                st.info("This action cannot be undone. Make sure you have a backup if needed.")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("🗑️ Confirm Delete", type="secondary", use_container_width=True):
+                        transport_db.database.pop(selected_lane_index)
+                        transport_db._build_lane_index()
+                        transport_db.save_to_json('transport_database.json')
+                        st.success("Lane deleted successfully!")
+                        st.rerun()
+                
+                with col2:
+                    if st.button("Cancel", use_container_width=True):
+                        st.rerun()
     
     # Tab 3: Import/Export
     with tab3:
@@ -257,12 +379,10 @@ def main():
                 if uploaded_file is not None:
                     if st.button("Import Excel Data"):
                         try:
-                            # Save temporary file
                             temp_path = "temp_transport.xlsx"
                             with open(temp_path, "wb") as f:
                                 f.write(uploaded_file.getbuffer())
                             
-                            # Load into database
                             transport_db.load_from_excel(temp_path)
                             transport_db.save_to_json('transport_database.json')
                             
@@ -271,7 +391,7 @@ def main():
                         except Exception as e:
                             st.error(f"Error importing Excel: {str(e)}")
             
-            else:  # JSON format
+            else:
                 uploaded_file = st.file_uploader("Choose JSON file", type=['json'])
                 if uploaded_file is not None:
                     if st.button("Import JSON Data"):
@@ -309,7 +429,6 @@ def main():
                 
                 elif export_format == "CSV":
                     if st.button("Export as CSV"):
-                        # Convert to flat structure for CSV
                         rows = []
                         for entry in transport_db.database:
                             row = {
@@ -323,7 +442,6 @@ def main():
                                 'lead_time_groupage': entry['lead_time']['groupage'],
                                 'fuel_surcharge': entry.get('fuel_surcharge', 0)
                             }
-                            # Add all price points
                             for weight, price in entry['prices_by_weight'].items():
                                 row[f'price_{weight}kg'] = price
                             rows.append(row)
@@ -337,12 +455,10 @@ def main():
                             mime="text/csv"
                         )
                 
-                else:  # Excel
+                else:
                     if st.button("Export as Excel"):
-                        # Create Excel file with multiple sheets
                         output = BytesIO()
                         with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                            # Main data sheet
                             rows = []
                             for entry in transport_db.database:
                                 row = {
@@ -360,7 +476,6 @@ def main():
                                     'Fuel Surcharge %': entry.get('fuel_surcharge', 0),
                                     'Full Truck Price': entry.get('full_truck_price', '')
                                 }
-                                # Add weight-based prices
                                 for weight in transport_db.weight_clusters:
                                     if weight in entry['prices_by_weight']:
                                         row[f'≤ {weight} kg'] = entry['prices_by_weight'][weight]
@@ -369,7 +484,6 @@ def main():
                             df = pd.DataFrame(rows)
                             df.to_excel(writer, sheet_name='Transport Costs', index=False)
                             
-                            # Statistics sheet
                             stats = transport_db.get_statistics()
                             df_stats = pd.DataFrame([
                                 {'Metric': 'Total Lanes', 'Value': stats['total_lanes']},
@@ -411,7 +525,6 @@ def main():
         )
         
         if st.button("Search"):
-            # Filter results
             filtered = transport_db.filter_lanes(
                 origin_country=search_origin_country.upper() if search_origin_country else None,
                 dest_country=search_dest_country.upper() if search_dest_country else None,
@@ -421,10 +534,8 @@ def main():
             if filtered:
                 st.success(f"Found {len(filtered)} matching lanes")
                 
-                # Display results
                 display_data = []
                 for entry in filtered:
-                    # Find price for the weight range
                     avg_weight = (weight_range[0] + weight_range[1]) / 2
                     price = "N/A"
                     for weight in sorted(entry['prices_by_weight'].keys()):
@@ -442,68 +553,6 @@ def main():
                 st.dataframe(pd.DataFrame(display_data), use_container_width=True)
             else:
                 st.warning("No lanes found matching the criteria")
-    
-    # # Tab 5: Statistics
-    # with tab5:
-    #     st.subheader("Database Statistics -- Soon!")
-        
-        # if len(transport_db.database) > 0:
-        #     stats = transport_db.get_statistics()
-            
-        #     col1, col2, col3 = st.columns(3)
-            
-        #     with col1:
-        #         st.metric("Total Lanes", stats['total_lanes'])
-        #         st.metric("Weight Clusters", stats['weight_clusters'])
-            
-        #     with col2:
-        #         st.metric("Countries", len(stats['countries']))
-        #         st.metric("Min Weight Cluster", f"{stats['min_weight']} kg")
-            
-        #     with col3:
-        #         st.metric("Max Weight Cluster", f"{stats['max_weight']:,} kg")
-        #         st.metric("Avg Lanes per Country", f"{stats['total_lanes'] / max(1, len(stats['countries'])):.1f}")
-            
-        #     # Country distribution
-        #     st.markdown("### Country Coverage")
-        #     country_counts = {}
-        #     for entry in transport_db.database:
-        #         orig = entry['origin']['country']
-        #         dest = entry['destination']['country']
-        #         country_counts[orig] = country_counts.get(orig, 0) + 1
-        #         country_counts[dest] = country_counts.get(dest, 0) + 1
-            
-        #     df_countries = pd.DataFrame(
-        #         [(k, v) for k, v in country_counts.items()],
-        #         columns=['Country', 'Lane Count']
-        #     ).sort_values('Lane Count', ascending=False)
-            
-        #     st.bar_chart(df_countries.set_index('Country'))
-            
-        #     # Price analysis
-        #     st.markdown("### Price Analysis")
-            
-        #     # Collect all prices for analysis
-        #     all_prices = []
-        #     for entry in transport_db.database:
-        #         for weight, price in entry['prices_by_weight'].items():
-        #             all_prices.append({
-        #                 'weight': weight,
-        #                 'price': price,
-        #                 'route': f"{entry['origin']['country']} → {entry['destination']['country']}"
-        #             })
-            
-        #     if all_prices:
-        #         df_prices = pd.DataFrame(all_prices)
-                
-        #         # Average price by weight cluster
-        #         avg_prices = df_prices.groupby('weight')['price'].agg(['mean', 'min', 'max', 'count'])
-        #         st.dataframe(avg_prices, use_container_width=True)
-                
-        #         # Price distribution chart
-        #         st.line_chart(avg_prices['mean'])
-        # else:
-        #     st.info("No data loaded. Please import transport data to view statistics.")
 
 if __name__ == "__main__":
     main()

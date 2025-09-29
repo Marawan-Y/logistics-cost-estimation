@@ -6,6 +6,8 @@ This module handles the supplier historical database, providing functionality to
 1. Store all historical supplier configurations
 2. Sync with current user configurations
 3. Support import/export functionality
+
+FIXED: Corrected key names for 'plant' and 'country' to match supplier data structure
 """
 
 import json
@@ -52,11 +54,14 @@ class SupplierDatabase:
             json.dump(data, f, indent=2, ensure_ascii=False)
 
     def sync_with_configurations(self, supplier_configs: List[Dict]):
-        """Sync database with current supplier configurations."""
+        """
+        Sync database with current supplier configurations.
+        FIXED: Use correct key names 'plant' and 'country' (not 'kb_plant' and 'kb_country')
+        """
         for supplier in supplier_configs:
             vendor_id = supplier.get('vendor_id')
             if vendor_id:
-                # Update or add supplier to database
+                # Update or add supplier to database with CORRECT key names
                 self.database[vendor_id] = {
                     'vendor_id': supplier.get('vendor_id', ''),
                     'vendor_name': supplier.get('vendor_name', ''),
@@ -65,8 +70,8 @@ class SupplierDatabase:
                     'vendor_zip': supplier.get('vendor_zip', ''),
                     'delivery_performance': supplier.get('delivery_performance', 0.0),
                     'deliveries_per_month': supplier.get('deliveries_per_month', 0),
-                    'kb_plant': supplier.get('kb_plant', ''),
-                    'kb_country': supplier.get('kb_country', ''),
+                    'plant': supplier.get('plant', ''),      # FIXED: was 'kb_plant'
+                    'country': supplier.get('country', ''),  # FIXED: was 'kb_country'
                     'distance': supplier.get('distance', 0.0)
                 }
 
@@ -105,16 +110,16 @@ class SupplierDatabase:
         for idx, (vendor_id, supplier_data) in enumerate(self.database.items(), 1):
             row = {
                 'Index': idx,
-                'Vendor ID': supplier_data['vendor_id'],
-                'Vendor ZIP': supplier_data['vendor_zip'],
-                'Vendor Name': supplier_data['vendor_name'],
-                'Vendor Country': supplier_data['vendor_country'],
-                'City of Manufacture': supplier_data['city_of_manufacture'],
-                'Delivery Performance (%)': supplier_data['delivery_performance'],
-                'Deliveries per Month': supplier_data['deliveries_per_month'],
-                'KB/Bendix Plant': supplier_data['kb_plant'],
-                'Distance (km)': supplier_data['distance'],
-                'KB/Bendix Country': supplier_data['kb_country']
+                'Vendor ID': supplier_data.get('vendor_id', ''),
+                'Vendor ZIP': supplier_data.get('vendor_zip', ''),
+                'Vendor Name': supplier_data.get('vendor_name', ''),
+                'Vendor Country': supplier_data.get('vendor_country', ''),
+                'City of Manufacture': supplier_data.get('city_of_manufacture', ''),
+                'Delivery Performance (%)': supplier_data.get('delivery_performance', 0.0),
+                'Deliveries per Month': supplier_data.get('deliveries_per_month', 0),
+                'KB/Bendix Plant': supplier_data.get('plant', ''),      # FIXED: use 'plant'
+                'Distance (km)': supplier_data.get('distance', 0.0),
+                'KB/Bendix Country': supplier_data.get('country', '')  # FIXED: use 'country'
             }
             data_list.append(row)
         
@@ -135,9 +140,9 @@ class SupplierDatabase:
                     'city_of_manufacture': str(row.get('City of Manufacture', '')),
                     'delivery_performance': float(row.get('Delivery Performance (%)', 0.0)),
                     'deliveries_per_month': int(row.get('Deliveries per Month', 0)),
-                    'kb_plant': str(row.get('KB/Bendix Plant', '')),
+                    'plant': str(row.get('KB/Bendix Plant', '')),      # FIXED: use 'plant'
                     'distance': float(row.get('Distance (km)', 0.0)),
-                    'kb_country': str(row.get('KB/Bendix Country', ''))
+                    'country': str(row.get('KB/Bendix Country', ''))  # FIXED: use 'country'
                 }
 
     def filter_suppliers(self, vendor_id: str = None, country: str = None, city: str = None) -> List[Dict]:
@@ -145,11 +150,11 @@ class SupplierDatabase:
         filtered = []
         
         for supplier_data in self.database.values():
-            if vendor_id and vendor_id.lower() not in supplier_data['vendor_id'].lower():
+            if vendor_id and vendor_id.lower() not in supplier_data.get('vendor_id', '').lower():
                 continue
-            if country and country.lower() not in supplier_data['vendor_country'].lower():
+            if country and country.lower() not in supplier_data.get('vendor_country', '').lower():
                 continue
-            if city and city.lower() not in supplier_data['city_of_manufacture'].lower():
+            if city and city.lower() not in supplier_data.get('city_of_manufacture', '').lower():
                 continue
             filtered.append(supplier_data)
         
@@ -159,7 +164,7 @@ class SupplierDatabase:
         """Get statistics about the supplier database."""
         countries = set()
         for supplier_data in self.database.values():
-            countries.add(supplier_data['vendor_country'])
+            countries.add(supplier_data.get('vendor_country', ''))
         
         return {
             'total_suppliers': len(self.database),
