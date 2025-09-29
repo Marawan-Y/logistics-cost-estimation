@@ -1,0 +1,21 @@
+{
+  "database": {
+    "902141": {
+      "vendor_id": "902141",
+      "vendor_name": "MAT",
+      "vendor_country": "DE",
+      "city_of_manufacture": "Marienhelde",
+      "vendor_zip": "51709",
+      "delivery_performance": 0.0,
+      "deliveries_per_month": 10,
+      "kb_plant": "",
+      "kb_country": "",
+      "distance": 600.0
+    }
+  },
+  "metadata": {
+    "save_timestamp": "2025-09-29T12:07:07.262123",
+    "version": "1.0.0",
+    "total_suppliers": 1
+  }
+}

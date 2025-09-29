@@ -28,9 +28,11 @@ def main():
             help="Cost of CO₂ emissions per metric ton"
         )
 
-        co2_conversion_factor = st.selectbox(
+        co2_conversion_factor = st.number_input(
             "CO₂ Conversion Factor *",
-            ["2.65", "3.17", "3.31"],
+            min_value=0.0,
+            step=0.01,
+            format="%.2f",
             help="CO₂ conversion factor based on Transportation mode & location. Sea = 3.31, Road/Rail = 3.17/2.65"
         )
 

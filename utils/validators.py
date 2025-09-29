@@ -144,96 +144,84 @@ class MaterialValidator(BaseValidator):
 
 
 class SupplierValidator(BaseValidator):
-    """Validator for supplier information - matching 2_Supplier_Information.py"""
-    
+    """Validator for supplier information - now includes location fields"""
+
     def validate_supplier(self, supplier_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Validate supplier data and return validation result.
+        Validate supplier data including location fields and return validation result.
         """
         errors = []
-        
-        # Required fields from 2_Supplier_Information.py
-        vendor_id = supplier_data.get('vendor_id', '').strip()
-        if self.is_empty_or_none(vendor_id):
-            errors.append("Vendor ID is required")
+
+        # -------- Required fields --------
+        vendor_id = str(supplier_data.get('vendor_id', '') or '').strip()
+        if vendor_id == '':
+            errors.append("[SV2] Vendor ID is required")
         elif len(vendor_id) > 20:
-            errors.append("Vendor ID must be 20 characters or less")
-        
-        vendor_name = supplier_data.get('vendor_name', '').strip()
-        if self.is_empty_or_none(vendor_name):
-            errors.append("Vendor Name is required")
+            errors.append("[SV2] Vendor ID must be 20 characters or less")
+
+        vendor_name = str(supplier_data.get('vendor_name', '') or '').strip()
+        if vendor_name == '':
+            errors.append("[SV2] Vendor Name is required")
         elif len(vendor_name) > 100:
-            errors.append("Vendor Name must be 100 characters or less")
-        
-        vendor_country = supplier_data.get('vendor_country', '').strip()
-        if self.is_empty_or_none(vendor_country):
-            errors.append("Vendor Country is required")
+            errors.append("[SV2] Vendor Name must be 100 characters or less")
+
+        vendor_country = str(supplier_data.get('vendor_country', '') or '').strip()
+        if vendor_country == '':
+            errors.append("[SV2] Vendor Country is required")
         elif len(vendor_country) > 50:
-            errors.append("Vendor Country must be 50 characters or less")
-        
-        city_of_manufacture = supplier_data.get('city_of_manufacture', '').strip()
-        if self.is_empty_or_none(city_of_manufacture):
-            errors.append("City of Manufacture is required")
+            errors.append("[SV2] Vendor Country must be 50 characters or less")
+
+        city_of_manufacture = str(supplier_data.get('city_of_manufacture', '') or '').strip()
+        if city_of_manufacture == '':
+            errors.append("[SV2] City of Manufacture is required")
         elif len(city_of_manufacture) > 50:
-            errors.append("City of Manufacture must be 50 characters or less")
-        
-        vendor_zip = supplier_data.get('vendor_zip', '').strip()
-        if self.is_empty_or_none(vendor_zip):
-            errors.append("Vendor ZIP is required")
+            errors.append("[SV2] City of Manufacture must be 50 characters or less")
+
+        vendor_zip = str(supplier_data.get('vendor_zip', '') or '').strip()
+        if vendor_zip == '':
+            errors.append("[SV2] Vendor ZIP is required")
         elif len(vendor_zip) > 20:
-            errors.append("Vendor ZIP must be 20 characters or less")
-        
-        delivery_performance = supplier_data.get('delivery_performance')
+            errors.append("[SV2] Vendor ZIP must be 20 characters or less")
+
+        delivery_performance = supplier_data.get('delivery_performance', None)
         if delivery_performance is None:
-            errors.append("Delivery Performance is required")
+            errors.append("[SV2] Delivery Performance is required")
         elif not self.is_valid_percentage(delivery_performance):
-            errors.append("Delivery Performance must be between 0 and 100 percent")
-        
-        deliveries_per_month = supplier_data.get('deliveries_per_month')
+            errors.append("[SV2] Delivery Performance must be between 0 and 100 percent")
+
+        deliveries_per_month = supplier_data.get('deliveries_per_month', None)
         if deliveries_per_month is None:
-            errors.append("Deliveries per Month is required")
+            errors.append("[SV2] Deliveries per Month is required")
         elif not self.is_positive_integer(deliveries_per_month, allow_zero=True):
-            errors.append("Deliveries per Month must be a non-negative integer")
-        
-        return {
-            'is_valid': len(errors) == 0,
-            'errors': errors
-        }
+            errors.append("[SV2] Deliveries per Month must be a non-negative integer")
 
-
-class LocationValidator(BaseValidator):
-    """Validator for KB/Bendix location information - matching 3_KB_Bendix_Location_Info.py"""
-    
-    def validate_location(self, location_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Validate location data and return validation result.
-        """
-        errors = []
-        
-        plant = location_data.get('plant', '').strip()
-        if self.is_empty_or_none(plant):
-            errors.append("KB/Bendix Plant is required")
+        # -------- KB/Bendix fields (explicit checks, no helper) --------
+        plant = str(supplier_data.get('plant', '') or '').strip()
+        if plant == '':
+            errors.append("[SV2] KB/Bendix Plant is required")
         elif len(plant) > 100:
-            errors.append("KB/Bendix Plant must be 100 characters or less")
-        
-        country = location_data.get('country', '').strip()
-        if self.is_empty_or_none(country):
-            errors.append("KB/Bendix Country is required")
-        elif len(country) > 50:
-            errors.append("KB/Bendix Country must be 50 characters or less")
-        
-        distance = location_data.get('distance')
+            errors.append("[SV2] KB/Bendix Plant must be 100 characters or less")
+
+        kb_country = str(supplier_data.get('country', '') or '').strip()
+        if kb_country == '':
+            errors.append("[SV2] KB/Bendix Country is required")
+        elif len(kb_country) > 50:
+            errors.append("[SV2] KB/Bendix Country must be 50 characters or less")
+
+        distance = supplier_data.get('distance', None)
         if distance is None:
-            errors.append("Distance is required")
+            errors.append("[SV2] Distance is required")
         elif not self.is_positive_number(distance, allow_zero=True):
-            errors.append("Distance must be a non-negative number")
-        elif distance > 50000:
-            errors.append("Distance seems unreasonably high (max 50,000 km)")
-        
-        return {
-            'is_valid': len(errors) == 0,
-            'errors': errors
-        }
+            errors.append("[SV2] Distance must be a non-negative number")
+        else:
+            try:
+                if float(distance) > 50000:
+                    errors.append("[SV2] Distance seems unreasonably high (max 50,000 km)")
+            except Exception:
+                errors.append("[SV2] Distance must be numeric")
+
+        return {'is_valid': len(errors) == 0, 'errors': errors}
+
 
 
 class OperationsValidator(BaseValidator):
@@ -628,11 +616,11 @@ class CO2Validator(BaseValidator):
         elif cost_per_ton > 1000:
             errors.append("CO₂ Cost per Ton seems unreasonably high (max €1,000/ton)")
         
-        co2_conversion_factor = co2_data.get('co2_conversion_factor', '').strip()
+        co2_conversion_factor = co2_data.get('co2_conversion_factor', '')
         if self.is_empty_or_none(co2_conversion_factor):
             errors.append("CO₂ Conversion Factor is required")
-        elif co2_conversion_factor not in ["2.65", "3.17", "3.31"]:
-            errors.append("CO₂ Conversion Factor must be one of: 2.65, 3.17, 3.31")
+        # elif co2_conversion_factor not in ["2.65", "3.17", "3.31"]:
+        #     errors.append("CO₂ Conversion Factor must be one of: 2.65, 3.17, 3.31")
         
         return {
             'is_valid': len(errors) == 0,

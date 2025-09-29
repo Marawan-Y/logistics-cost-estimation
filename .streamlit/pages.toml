@@ -14,11 +14,6 @@ name = "Supplier Information"
 icon = "🏭"
 
 [[pages]]
-path = "pages/3_Locations.py"
-name = "KB Bendix Location Info"
-icon = "📍"
-
-[[pages]]
 path = "pages/4_Operations.py"
 name = "Operations Information"
 icon = "⚙️"

@@ -122,7 +122,7 @@ def main():
     config_counts = {
         "Materials": len(data_manager.get_materials()),
         "Suppliers": len(data_manager.get_suppliers()),
-        "Locations": len(data_manager.get_locations()),
+        # REMOVED: "Locations": len(data_manager.get_locations()),
         "Operations": len(data_manager.get_operations()),
         "Packaging": len(data_manager.get_packaging()),
         "Repacking": len(data_manager.get_repacking()),
@@ -143,7 +143,7 @@ def main():
     # Core configurations
     with col1:
         st.markdown("### 🏢 Core Setup")
-        for key in ["Materials", "Suppliers", "Locations", "Operations"]:
+        for key in ["Materials", "Suppliers", "Operations"]:
             count = config_counts[key]
             status = "✅" if count > 0 else "❌"
             st.metric(f"{status} {key}", count)
@@ -227,7 +227,7 @@ def main():
     st.subheader("🔍 Configuration Details")
     
     # Use tabs for different configuration types
-    tabs = st.tabs(["Materials & Suppliers", "Operations & Locations", "Cost Components", "All Configurations"])
+    tabs = st.tabs(["Materials & Suppliers", "Operations", "Cost Components", "All Configurations"])
     
     with tabs[0]:
         col1, col2 = st.columns(2)
@@ -265,14 +265,14 @@ def main():
             else:
                 st.info("No operations configured yet.")
         
-        with col2:
-            st.markdown("### Locations")
-            locations = data_manager.get_locations()
-            if locations:
-                df_locations = pd.DataFrame(locations)
-                st.dataframe(df_locations, use_container_width=True, height=200)
-            else:
-                st.info("No locations configured yet.")
+        # with col2:
+        #     st.markdown("### Locations")
+        #     locations = data_manager.get_locations()
+        #     if locations:
+        #         df_locations = pd.DataFrame(locations)
+        #         st.dataframe(df_locations, use_container_width=True, height=200)
+        #     else:
+        #         st.info("No locations configured yet.")
     
     with tabs[2]:
         # Cost components overview
@@ -298,7 +298,7 @@ def main():
         all_configs = {
             "Materials": data_manager.get_materials(),
             "Suppliers": data_manager.get_suppliers(),
-            "Locations": data_manager.get_locations(),
+            # REMOVED: "Locations": data_manager.get_locations(),
             "Operations": data_manager.get_operations(),
             "Packaging": data_manager.get_packaging(),
             "Repacking": data_manager.get_repacking(),
