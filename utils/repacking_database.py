@@ -73,17 +73,23 @@ class RepackingDatabase:
         
         self.operation_costs[weight_category].append(operation_data)
 
+    def update_operation_in_category(self, weight_category: str, operation_index: int, operation_data: Dict):
+        """Update specific operation in weight category."""
+        if weight_category in self.operation_costs:
+            if 0 <= operation_index < len(self.operation_costs[weight_category]):
+                self.operation_costs[weight_category][operation_index] = operation_data
+
     def remove_operation_from_category(self, weight_category: str, operation_index: int):
         """Remove specific operation from weight category."""
         if weight_category in self.operation_costs:
             if 0 <= operation_index < len(self.operation_costs[weight_category]):
                 self.operation_costs[weight_category].pop(operation_index)
 
-    def get_weight_categories(self):
+    def get_weight_categories(self) -> List[str]:
         """Get all weight categories."""
         return list(self.operation_costs.keys())
 
-    def get_operations_for_category(self, weight_category: str):
+    def get_operations_for_category(self, weight_category: str) -> List[Dict]:
         """Get all operations for a weight category."""
         return self.operation_costs.get(weight_category, [])
 

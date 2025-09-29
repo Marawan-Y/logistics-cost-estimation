@@ -4,6 +4,7 @@ Data Manager for Logistics Cost Application
 This module handles all data storage, retrieval, and management operations
 for materials, suppliers, packaging, transport, warehouse, and all other configurations.
 Now includes persistent storage using JSON files.
+Location data is now part of supplier information.
 """
 import streamlit as st
 import json
@@ -33,16 +34,13 @@ class DataManager:
         if 'suppliers' not in st.session_state:
             st.session_state.suppliers = []
         
-        # Configuration data
-        if 'locations' not in st.session_state:
-            st.session_state.locations = []
+        # Configuration data (locations removed - now in supplier)
         if 'operations' not in st.session_state:
             st.session_state.operations = []
         if 'packaging' not in st.session_state:
             st.session_state.packaging = []
         if 'repacking' not in st.session_state:
             st.session_state.repacking = []
-        # REMOVED: customs initialization
         if 'transport' not in st.session_state:
             st.session_state.transport = []
         if 'co2' not in st.session_state:
@@ -75,18 +73,16 @@ class DataManager:
                 )
             except Exception as e:
                 st.error(f"Error loading saved data: {e}")
-                # Create backup of corrupted file
                 self._backup_corrupted_file()
     
     def _populate_session_state(self, data: Dict[str, Any]):
         """Populate session state with loaded data"""
         st.session_state.materials = data.get('materials', [])
         st.session_state.suppliers = data.get('suppliers', [])
-        st.session_state.locations = data.get('locations', [])
+        # locations removed - now in supplier
         st.session_state.operations = data.get('operations', [])
         st.session_state.packaging = data.get('packaging', [])
         st.session_state.repacking = data.get('repacking', [])
-        # REMOVED: customs population
         st.session_state.transport = data.get('transport', [])
         st.session_state.co2 = data.get('co2', [])
         st.session_state.warehouse = data.get('warehouse', [])
@@ -103,11 +99,10 @@ class DataManager:
         return {
             'materials': st.session_state.materials,
             'suppliers': st.session_state.suppliers,
-            'locations': st.session_state.locations,
+            # locations removed
             'operations': st.session_state.operations,
             'packaging': st.session_state.packaging,
             'repacking': st.session_state.repacking,
-            # REMOVED: customs from data export
             'transport': st.session_state.transport,
             'co2': st.session_state.co2,
             'warehouse': st.session_state.warehouse,
@@ -233,13 +228,11 @@ class DataManager:
     def remove_material(self, material_no: str) -> bool:
         """Remove a material and all associated configurations."""
         try:
-            # Remove material
             st.session_state.materials = [
                 m for m in st.session_state.materials 
                 if m['material_no'] != material_no
             ]
             
-            # Remove associated configs
             st.session_state.packaging = [
                 p for p in st.session_state.packaging 
                 if p.get('material_id') != material_no
@@ -254,7 +247,7 @@ class DataManager:
         except Exception:
             return False
     
-    # Supplier management
+    # Supplier management (now includes location data)
     def add_supplier(self, supplier_data: Dict[str, Any]) -> bool:
         """Add a new supplier to the database."""
         try:
@@ -294,13 +287,11 @@ class DataManager:
     def remove_supplier(self, vendor_id: str) -> bool:
         """Remove a supplier and all associated configurations."""
         try:
-            # Remove supplier
             st.session_state.suppliers = [
                 s for s in st.session_state.suppliers 
                 if s['vendor_id'] != vendor_id
             ]
             
-            # Remove associated configs
             st.session_state.packaging = [
                 p for p in st.session_state.packaging 
                 if p.get('supplier_id') != vendor_id
@@ -310,48 +301,6 @@ class DataManager:
                 if t.get('supplier_id') != vendor_id
             ]
             
-            self._save_data_automatically()
-            return True
-        except Exception:
-            return False
-    
-    # Location management
-    def add_location(self, location_data: Dict[str, Any]) -> bool:
-        """Add a new location."""
-        try:
-            st.session_state.locations.append(location_data)
-            self._save_data_automatically()
-            return True
-        except Exception:
-            return False
-    
-    def get_locations(self) -> List[Dict[str, Any]]:
-        """Get all locations."""
-        return st.session_state.locations
-    
-    def location_exists(self, plant: str) -> bool:
-        """Check if a location exists."""
-        return any(loc['plant'] == plant for loc in st.session_state.locations)
-    
-    def update_location(self, plant: str, updated_data: Dict[str, Any]) -> bool:
-        """Update an existing location."""
-        try:
-            for i, loc in enumerate(st.session_state.locations):
-                if loc['plant'] == plant:
-                    st.session_state.locations[i] = updated_data
-                    self._save_data_automatically()
-                    return True
-            return False
-        except Exception:
-            return False
-    
-    def remove_location(self, plant: str) -> bool:
-        """Remove a location."""
-        try:
-            st.session_state.locations = [
-                loc for loc in st.session_state.locations 
-                if loc['plant'] != plant
-            ]
             self._save_data_automatically()
             return True
         except Exception:
@@ -465,16 +414,14 @@ class DataManager:
         except Exception:
             return False
     
-    # REMOVED: All customs management methods
-    
     # Transport management
     def add_transport(self, transport_data: Dict[str, Any]) -> bool:
-         """Add new transport configuration."""
-         try:
+        """Add new transport configuration."""
+        try:
             st.session_state.transport.append(transport_data)
             self._save_data_automatically()
             return True
-         except Exception:
+        except Exception:
             return False
 
     def get_transport(self) -> List[Dict[str, Any]]:
@@ -489,10 +436,10 @@ class DataManager:
         """Update an existing transport configuration identified by old_key."""
         try:
             for i, t in enumerate(st.session_state.transport):
-                  if t.get('key') == old_key:
-                     st.session_state.transport[i] = updated_data
-                     self._save_data_automatically()
-                     return True
+                if t.get('key') == old_key:
+                    st.session_state.transport[i] = updated_data
+                    self._save_data_automatically()
+                    return True
             return False
         except Exception:
             return False
@@ -501,9 +448,9 @@ class DataManager:
         """Remove transport configuration by its unique key."""
         try:
             st.session_state.transport = [
-            t for t in st.session_state.transport 
-            if t.get('key') != key
-        ]
+                t for t in st.session_state.transport 
+                if t.get('key') != key
+            ]
             self._save_data_automatically()
             return True
         except Exception:
@@ -609,7 +556,6 @@ class DataManager:
         except Exception:
             return False
 
-    
     # Warehouse management
     def add_warehouse(self, warehouse_data: Dict[str, Any]) -> bool:
         """Add warehouse configuration."""
@@ -753,6 +699,14 @@ class DataManager:
         """Check if repacking database exists"""
         return self.get_repacking_database_path().exists()
     
+    def get_supplier_database_path(self) -> Path:
+        """Get the path for supplier database file"""
+        return Path("supplier_database.json")
+
+    def has_supplier_database(self) -> bool:
+        """Check if supplier database exists"""
+        return self.get_supplier_database_path().exists()
+    
     # Utility methods
     def is_calculation_ready(self) -> bool:
         """Check if all required data is configured for calculations."""
@@ -763,7 +717,7 @@ class DataManager:
         if not (materials and suppliers):
             return False
         
-        # Need at least basic configurations (REMOVED customs requirement)
+        # Need at least basic configurations
         packaging_configs = st.session_state.packaging
         transport_configs = st.session_state.transport
         warehouse_configs = st.session_state.warehouse
@@ -796,11 +750,10 @@ class DataManager:
         try:
             st.session_state.materials = []
             st.session_state.suppliers = []
-            st.session_state.locations = []
+            # locations removed
             st.session_state.operations = []
             st.session_state.packaging = []
             st.session_state.repacking = []
-            # REMOVED: customs clearing
             st.session_state.transport = []
             st.session_state.co2 = []
             st.session_state.warehouse = []
@@ -835,11 +788,10 @@ class DataManager:
         stats = {
             'total_materials': len(st.session_state.materials),
             'total_suppliers': len(st.session_state.suppliers),
-            'total_locations': len(st.session_state.locations),
+            # locations removed
             'total_operations': len(st.session_state.operations),
             'total_packaging': len(st.session_state.packaging),
             'total_repacking': len(st.session_state.repacking),
-            # REMOVED: 'total_customs': len(st.session_state.customs),
             'total_transport': len(st.session_state.transport),
             'total_co2': len(st.session_state.co2),
             'total_warehouse': len(st.session_state.warehouse),

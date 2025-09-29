@@ -289,11 +289,11 @@ def main():
             total_configs = sum([
                 statistics['total_materials'],
                 statistics['total_suppliers'],
-                statistics['total_locations'],
+                # statistics['total_locations'],
                 statistics['total_operations'],
                 statistics['total_packaging'],
                 statistics['total_repacking'],
-                statistics['total_customs'],
+                # statistics['total_customs'],
                 statistics['total_transport'],
                 statistics['total_co2'],
                 statistics['total_warehouse'],
@@ -349,8 +349,8 @@ def main():
             # Check for optional configurations
             optional_configs = {
                 'Operations': data_manager.get_operations(),
-                'Locations': data_manager.get_locations(),
-                'Customs': data_manager.get_customs(),
+                # 'Locations': data_manager.get_locations(),
+                # 'Customs': data_manager.get_customs(),
                 'Interest': data_manager.get_interest()
             }
             

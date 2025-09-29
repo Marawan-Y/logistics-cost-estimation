@@ -415,7 +415,6 @@ class LogisticsCostCalculator:
         transport_config,
         packaging_config,
         operations_config,
-        location_config=None,
         material=None,
         supplier=None
     ):
@@ -471,7 +470,7 @@ class LogisticsCostCalculator:
                 # Location info
                 supplier_country = supplier.get('vendor_country', '')
                 supplier_zip = supplier.get('vendor_zip', '')[:2]  # First 2 digits
-                dest_country = location_config.get('country', 'DE') if location_config else 'DE'
+                dest_country = supplier.get('country', 'DE') if supplier else 'DE'
                 dest_zip = '94'  # Aldersbach default
 
               # --- Compute fill per LU (pcs/LU) for correct per-piece logic ---
@@ -612,7 +611,7 @@ class LogisticsCostCalculator:
             self.calculation_errors.append(f"Total tons error: {e}")
             return 0
 
-    def emission_kg_co2(self, material, transport_config, packaging_config, location_config, co2_config):
+    def emission_kg_co2(self, material, transport_config, packaging_config, supplier, co2_config):
         """
         emission [kg CO2] = total_tons * energy_consumption * distance * conversion_factor
         """
@@ -621,7 +620,7 @@ class LogisticsCostCalculator:
             energy_consumption = self.energy_consumption(transport_config)
 
             # Get distance from location config
-            distance_km = location_config.get('distance', 100) if location_config else 100
+            distance_km = supplier.get('distance', 100) if supplier else 100
 
             # Get CO2 conversion factor from co2_config
             if co2_config:
@@ -635,12 +634,12 @@ class LogisticsCostCalculator:
             self.calculation_errors.append(f"CO2 emission error: {e}")
             return 0
 
-    def co2_cost_per_piece(self, material, transport_config, packaging_config, location_config, co2_config):
+    def co2_cost_per_piece(self, material, transport_config, packaging_config, supplier, co2_config):
         """
         X5 = CO2 cost per piece
         """
         try:
-            emission = self.emission_kg_co2(material, transport_config, packaging_config, location_config, co2_config)
+            emission = self.emission_kg_co2(material, transport_config, packaging_config, supplier, co2_config)
             annual_volume = material.get('annual_volume', 1)
             if annual_volume <= 0:
                 annual_volume = 1
@@ -905,7 +904,6 @@ class LogisticsCostCalculator:
         co2_config=None,
         additional_costs=None,
         operations_config=None,
-        location_config=None,
         inventory_config=None
     ):
         """
@@ -921,12 +919,11 @@ class LogisticsCostCalculator:
                 transport_config,
                 packaging_config,
                 operations_config,
-                location_config=location_config,
-                material=material,
-                supplier=supplier
+                supplier=supplier,
+                material=material
             )
             co2_cost = self.co2_cost_per_piece(
-                material, transport_config, packaging_config, location_config, co2_config
+                material, transport_config, packaging_config, supplier, co2_config
             )
             warehouse_cost = self.warehouse_cost_per_piece(
                 material, warehouse_config, packaging_config, operations_config
@@ -997,7 +994,7 @@ class LogisticsCostCalculator:
                 no_sp_pallet_cover = 0
 
             weight_per_lu = self.weight_per_lu(packaging_config, material)
-            emission = self.emission_kg_co2(material, transport_config, packaging_config, location_config, co2_config)
+            emission = self.emission_kg_co2(material, transport_config, packaging_config, supplier, co2_config)
             total_tons = self.total_tons(material, packaging_config)
 
             no_days = self.inventory_days(material, packaging_config)
@@ -1119,7 +1116,7 @@ class LogisticsCostCalculator:
 
     def calculate_all_costs(self, materials, suppliers, packaging_configs, transport_configs,
                          warehouse_configs, co2_configs, operations_configs=None,
-                         location_configs=None, repacking_configs=None, customs_configs=None,
+                         repacking_configs=None, customs_configs=None,
                          inventory_configs=None, additional_costs=None):
         """
         Calculate logistics costs for all configured material-supplier combinations.
@@ -1129,7 +1126,7 @@ class LogisticsCostCalculator:
 
         # Get first config for singleton configs
         operations_config = operations_configs[0] if operations_configs else None
-        location_config = location_configs[0] if location_configs else None
+        supplier = suppliers[0] if suppliers else None
         repacking_config = repacking_configs[0] if repacking_configs else None
         customs_config = customs_configs[0] if customs_configs else None
         co2_config = co2_configs[0] if co2_configs else None
@@ -1161,7 +1158,6 @@ class LogisticsCostCalculator:
                     co2_config=co2_config,
                     additional_costs=additional_costs,
                     operations_config=operations_config,
-                    location_config=location_config,
                     inventory_config=inventory_configs[0] if inventory_configs else None
                 )
 
