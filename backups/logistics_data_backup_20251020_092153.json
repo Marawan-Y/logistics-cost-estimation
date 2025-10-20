@@ -15,6 +15,22 @@
       "sop": "",
       "Pcs_Price": 0.0,
       "life_time_years": 10
+    },
+    {
+      "project_name": "a",
+      "material_no": "a",
+      "material_desc": "a",
+      "weight_per_pcs": 0.001,
+      "usage": "",
+      "daily_demand": 0.01,
+      "annual_volume": 1,
+      "lifetime_volume": 0.0,
+      "peak_year": "",
+      "peak_year_volume": 0,
+      "working_days": 250,
+      "sop": "",
+      "Pcs_Price": 0.01,
+      "life_time_years": 1
     }
   ],
   "suppliers": [
@@ -29,21 +45,8 @@
       "plant": "Aldersbach",
       "country": "DE",
       "distance": 600.0
-    },
-    {
-      "vendor_id": "a",
-      "vendor_name": "a",
-      "vendor_country": "a",
-      "city_of_manufacture": "a",
-      "vendor_zip": "a",
-      "delivery_performance": 0.0,
-      "deliveries_per_month": 10,
-      "plant": "a",
-      "country": "a",
-      "distance": 600.0
     }
   ],
-  "locations": [],
   "operations": [
     {
       "incoterm_code": "FCA",
@@ -128,7 +131,7 @@
     "auto_save": true
   },
   "metadata": {
-    "save_timestamp": "2025-09-29T11:14:46.276256",
+    "save_timestamp": "2025-10-20T09:06:31.780077",
     "version": "1.0.0"
   }
 }

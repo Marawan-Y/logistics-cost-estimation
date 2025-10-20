@@ -216,10 +216,11 @@ def main():
             with colL:
                 st.markdown("### 📦 Materials Selection")
                 if materials:
+                    # Default to the LAST material only; user can add more
                     selected_material_ids = st.multiselect(
                         "Select Materials:",
                         options=[m['material_no'] for m in materials],
-                        default=[m['material_no'] for m in materials[:3]],
+                        default=[materials[-1]['material_no']],
                         format_func=lambda x: f"{x} - {next(m['material_desc'] for m in materials if m['material_no'] == x)}",
                     )
                 else:
@@ -229,10 +230,11 @@ def main():
             with colR:
                 st.markdown("### 🏭 Suppliers Selection")
                 if suppliers:
+                    # Default to the LAST supplier only; user can add more
                     selected_supplier_ids = st.multiselect(
                         "Select Suppliers:",
                         options=[s['vendor_id'] for s in suppliers],
-                        default=[s['vendor_id'] for s in suppliers[:3]],
+                        default=[suppliers[-1]['vendor_id']],
                         format_func=lambda x: f"{x} - {next(s['vendor_name'] for s in suppliers if s['vendor_id'] == x)}",
                     )
                 else:
@@ -268,9 +270,11 @@ def main():
                         + (f" ({s.get('distance')} km)" if s.get('distance') is not None else "")
                         for s in suppliers
                     ]
+                    # Default to the LAST location
                     selected_location_idx = st.selectbox(
                         "Select Location:",
-                        range(len(suppliers)),
+                        options=range(len(suppliers)),
+                        index=len(suppliers) - 1,
                         format_func=lambda x: supplier_options[x],
                     )
                     selected_configs['location'] = suppliers[selected_location_idx]
@@ -285,9 +289,11 @@ def main():
                         f"{op.get('incoterm_code','?')} @ {op.get('incoterm_place','?')} | {op.get('currency','?')} | {op.get('lead_time','?')}d lead time"
                         for op in operations
                     ]
+                    # Default to the LAST operations config
                     selected_ops_idx = st.selectbox(
                         "Select Operations:",
-                        range(len(operations)),
+                        options=range(len(operations)),
+                        index=len(operations) - 1,
                         format_func=lambda x: ops_options[x],
                     )
                     selected_configs['operations'] = operations[selected_ops_idx]
@@ -306,9 +312,11 @@ def main():
                         f"{pkg.get('box_type','?')} | {pkg.get('pallet_type','?')} | SP: {pkg.get('sp_needed','?')}"
                         for pkg in packaging_configs
                     ]
+                    # Default to the LAST packaging config
                     selected_pkg_idx = st.selectbox(
                         "Select Packaging:",
-                        range(len(packaging_configs)),
+                        options=range(len(packaging_configs)),
+                        index=len(packaging_configs) - 1,
                         format_func=lambda x: pkg_options[x],
                     )
                     selected_configs['packaging'] = packaging_configs[selected_pkg_idx]
@@ -327,9 +335,11 @@ def main():
                         f"{rep.get('pcs_weight','?')} | {rep.get('packaging_one_way','?')}"
                         for rep in repacking_configs
                     ]
+                    # Default to the LAST repacking config
                     selected_rep_idx = st.selectbox(
                         "Select Repacking:",
-                        range(len(repacking_configs)),
+                        options=range(len(repacking_configs)),
+                        index=len(repacking_configs) - 1,
                         format_func=lambda x: rep_options[x],
                     )
                     selected_configs['repacking'] = repacking_configs[selected_rep_idx]
@@ -350,9 +360,11 @@ def main():
                             trans_options.append(f"{trans.get('mode1','?')} | Auto-calculated | SF: {trans.get('stack_factor','?')}")
                         else:
                             trans_options.append(f"{trans.get('mode1','?')} | €{trans.get('cost_lu',0):.2f}/LU | SF: {trans.get('stack_factor','?')}")
+                    # Default to the LAST transport config
                     selected_trans_idx = st.selectbox(
                         "Select Transport:",
-                        range(len(transport_configs)),
+                        options=range(len(transport_configs)),
+                        index=len(transport_configs) - 1,
                         format_func=lambda x: trans_options[x],
                     )
                     selected_configs['transport'] = transport_configs[selected_trans_idx]
@@ -367,9 +379,11 @@ def main():
                         f"€{co2.get('cost_per_ton',0):.0f}/ton | Factor: {co2.get('co2_conversion_factor','?')}"
                         for co2 in co2_configs
                     ]
+                    # Default to the LAST CO2 config
                     selected_co2_idx = st.selectbox(
                         "Select CO₂ Config:",
-                        range(len(co2_configs)),
+                        options=range(len(co2_configs)),
+                        index=len(co2_configs) - 1,
                         format_func=lambda x: co2_options[x],
                     )
                     selected_configs['co2'] = co2_configs[selected_co2_idx]
@@ -400,9 +414,11 @@ def main():
                         f"€{wh.get('cost_per_loc',0):.2f}/location/month"
                         for wh in warehouse_configs
                     ]
+                    # Default to the LAST warehouse config
                     selected_wh_idx = st.selectbox(
                         "Select Warehouse:",
-                        range(len(warehouse_configs)),
+                        options=range(len(warehouse_configs)),
+                        index=len(warehouse_configs) - 1,
                         format_func=lambda x: wh_options[x],
                     )
                     selected_configs['warehouse'] = warehouse_configs[selected_wh_idx]
@@ -414,9 +430,11 @@ def main():
                 st.markdown("### 💰 Interest Configuration")
                 if interest_configs:
                     int_options = [f"{intr.get('rate',0):.2f}% annual" for intr in interest_configs]
+                    # Default to the LAST interest config
                     selected_int_idx = st.selectbox(
                         "Select Interest:",
-                        range(len(interest_configs)),
+                        options=range(len(interest_configs)),
+                        index=len(interest_configs) - 1,
                         format_func=lambda x: int_options[x],
                     )
                     selected_configs['interest'] = interest_configs[selected_int_idx]
@@ -427,10 +445,11 @@ def main():
             with colC:
                 st.markdown("### ➕ Additional Costs")
                 if additional_costs:
+                    # Default to the LAST additional cost only; user can add more
                     selected_additional_indices = st.multiselect(
                         "Select Additional Costs:",
-                        range(len(additional_costs)),
-                        default=list(range(len(additional_costs))),
+                        options=range(len(additional_costs)),
+                        default=[len(additional_costs) - 1],
                         format_func=lambda x: f"{additional_costs[x].get('cost_name','Cost')}: €{additional_costs[x].get('cost_value',0):.2f}",
                     )
                     selected_configs['additional_costs'] = [additional_costs[i] for i in selected_additional_indices]
