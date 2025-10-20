@@ -536,19 +536,18 @@ def main():
                 
                 display_data = []
                 for entry in filtered:
-                    avg_weight = (weight_range[0] + weight_range[1]) / 2
-                    price = "N/A"
-                    for weight in sorted(entry['prices_by_weight'].keys()):
-                        if avg_weight <= weight:
-                            price = f"€{entry['prices_by_weight'][weight]:.2f}"
-                            break
-                    
-                    display_data.append({
+                    row = {
                         'Lane': f"{entry['origin']['country']}{entry['origin']['zip_code']} → {entry['destination']['country']}{entry['destination']['zip_code']}",
                         'Cities': f"{entry['origin']['city']} → {entry['destination']['city']}",
                         'Lead Time': entry['lead_time']['groupage'],
-                        f'Price (~{int(avg_weight)}kg)': price
-                    })
+                    }
+                    # Show all cluster prices within the selected range, sorted numerically
+                    for weight in sorted(entry['prices_by_weight'].keys(), key=float):
+                        w = float(weight)
+                        if weight_range[0] <= w <= weight_range[1]:
+                            label = f'≤ {int(w)} kg'
+                            row[label] = f"€{entry['prices_by_weight'][weight]:.2f}"
+                    display_data.append(row)
                 
                 st.dataframe(pd.DataFrame(display_data), use_container_width=True)
             else:
