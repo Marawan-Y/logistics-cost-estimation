@@ -396,7 +396,7 @@ Need specific help? Just ask about any feature!"""
             response = self.llm.create_chat_completion(
                 messages=messages,
                 max_tokens=500,
-                temperature=0.2, # more deterministic to the data without any creative generative answrers that is not relate to the investigated topic
+                temperature=0.2, # more deterministic and relevant to the data without any creative generative answrers that is not relate to the investigated topic
             )
 
             # Extract the assistant's reply
