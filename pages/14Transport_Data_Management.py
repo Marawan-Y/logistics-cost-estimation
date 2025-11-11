@@ -5,9 +5,49 @@ import numpy as np
 from utils.data_manager import DataManager
 from utils.transport_database import TransportDatabase
 import json
+from pathlib import Path
 from io import BytesIO
 
 st.set_page_config(page_title="Transport Data Management", page_icon="🚛", layout="wide")
+
+DB_DIR = Path("DB")
+TRANSPORT_JSON_CACHE = Path("transport_database.json")  # if you keep a local cache
+
+def _autoload_transport_once():
+    """
+    Load Transport DB from DB/Excel/Transport cost.xlsx, else DB/JSON/transport_database.json,
+    else legacy local cache. Run once per session.
+    """
+    if st.session_state.get("_transport_autoloaded"):
+        return
+
+    # transport_db = st.session_state.transport_db
+    excel_path = DB_DIR / "Excel" / "Transport cost.xlsx"
+    json_path  = DB_DIR / "JSON"  / "transport_database.json"
+
+    loaded_from = None
+    try:
+        if excel_path.exists():
+            # transport_db.reset_to_defaults()
+            # transport_db.load_from_excel(str(excel_path))
+            loaded_from = str(excel_path)
+        elif json_path.exists():
+            # transport_db.reset_to_defaults()
+            # transport_db.load_from_json(str(json_path))
+            loaded_from = str(json_path)
+        elif TRANSPORT_JSON_CACHE.exists():
+            # transport_db.reset_to_defaults()
+            # transport_db.load_from_json(str(TRANSPORT_JSON_CACHE))
+            loaded_from = str(TRANSPORT_JSON_CACHE)
+    except Exception as e:
+        st.warning(f"Transport autoload warning: {e}")
+
+    if loaded_from:
+        st.info(f"📥 Transport auto-loaded from: `{loaded_from}`")
+    else:
+        st.info("📥 Transport: no file found in /DB. Starting empty/default.")
+
+    st.session_state["_transport_autoloaded"] = True
 
 def main():
     st.title("Transport Data Management")
@@ -24,7 +64,8 @@ def main():
             st.session_state.transport_db.load_from_json('transport_database.json')
         except:
             pass
-    
+
+    _autoload_transport_once()    
     transport_db = st.session_state.transport_db
     
     # Create tabs
