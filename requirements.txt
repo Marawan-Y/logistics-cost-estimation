@@ -6,7 +6,7 @@ psycopg2-binary>=2.9.10
 sqlalchemy>=2.0.41
 numpy
 plotly
-
+pyarrow
 openpyxl
 xlsxwriter
 Pillow
@@ -14,3 +14,8 @@ Pillow
 python-dotenv>=1.0.0
 
 # llama-cpp-python
+
+openpyxl>=3.1
+python-dotenv>=1.0
+
+# validators>=0.28,<1
