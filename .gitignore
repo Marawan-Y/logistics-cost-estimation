@@ -1,0 +1,13 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Build artifacts
+build/
+dist/
+release/
+*.spec
+
+# Logs
+build_full.log
