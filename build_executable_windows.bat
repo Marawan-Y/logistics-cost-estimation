@@ -14,7 +14,6 @@ REM onedir for debug, onefile for single-EXE packaging
 set "BUILD_MODE=onedir"
 set "HEARTBEAT_SECS=15"
 set "HOOK_DIR=%SCRIPT_DIR%pyi_hooks"
-set "USE_FIX_METADATA_HOOK_ONEFILE=0"
 set "PYTHONUTF8=1"
 
 REM ================== PREP & LOGGING =================
@@ -24,10 +23,16 @@ echo === BUILD START: %DATE% %TIME% ===>>"%LOG%"
 echo [INFO] Host Pythons on PATH:>>"%LOG%"
 where python >>"%LOG%" 2>&1
 
+REM ================== CREATE/VERIFY VENV =================
 if not exist "%VENV_DIR%" (
   echo [TIME] Create venv start: %DATE% %TIME%>>"%LOG%"
   python -m venv "%VENV_DIR%" >>"%LOG%" 2>&1 || (echo [ERROR] venv create failed & goto :showlog_err)
   echo [TIME] Create venv end:   %DATE% %TIME%>>"%LOG%"
+)
+
+if not exist "%VENV_PY%" (
+  echo [ERROR] Python interpreter not found: "%VENV_PY%">>"%LOG%"
+  goto :showlog_err
 )
 
 echo [INFO] Using interpreter: "%VENV_PY%">>"%LOG%"
@@ -48,31 +53,55 @@ echo [TIME] deps install end:   %DATE% %TIME%>>"%LOG%"
 echo [INFO] Frozen deps (pip freeze):>>"%LOG%"
 "%VENV_PY%" -m pip freeze >>"%LOG%" 2>&1
 
-REM ============== PREFLIGHT METADATA CHECK ===========
-for /F "usebackq delims=" %%V in (`"%VENV_PY%" -c "import importlib.metadata as m; print(m.version('streamlit'))"`) do set "STREAMLIT_VER=%%V"
-if not defined STREAMLIT_VER set "STREAMLIT_VER=1.51.0"
+REM ============== PREFLIGHT CHECKS ====================
+REM Check if bootstrap file exists
+if not exist "%SCRIPT_DIR%run_streamlit_bootstrap.py" (
+  echo [ERROR] Bootstrap file not found: "%SCRIPT_DIR%run_streamlit_bootstrap.py">>"%LOG%"
+  goto :showlog_err
+)
+
+REM ============== STREAMLIT VERSION & PATH ============
+echo [INFO] Detecting Streamlit version and path...>>"%LOG%"
+for /F "usebackq delims=" %%V in (`"%VENV_PY%" -c "import importlib.metadata as m; print(m.version('streamlit'))" 2^>^&1`) do set "STREAMLIT_VER=%%V"
+if not defined STREAMLIT_VER (
+  echo [ERROR] Could not detect Streamlit version>>"%LOG%"
+  goto :showlog_err
+)
 set "STREAMLIT_BUNDLED_VERSION=%STREAMLIT_VER%"
 echo [INFO] STREAMLIT_BUNDLED_VERSION=%STREAMLIT_BUNDLED_VERSION%>>"%LOG%"
 
-REM *** ROBUST: capture the actual Streamlit package dir to a temp file, then read it ***
+REM *** Get Streamlit package directory ***
 set "TMP_SL_FILE=%SCRIPT_DIR%_streamlit_dir.txt"
 del "%TMP_SL_FILE%" 2>nul
-"%VENV_PY%" - <<#PY 1>"%TMP_SL_FILE%" 2>>"%LOG%"
-import streamlit, os, sys
-sys.stdout.write(os.path.dirname(streamlit.__file__))
-#PY
+"%VENV_PY%" -c "import streamlit, os, sys; sys.stdout.write(os.path.dirname(streamlit.__file__))" 1>"%TMP_SL_FILE%" 2>>"%LOG%"
+if errorlevel 1 (
+  echo [ERROR] Could not import streamlit>>"%LOG%"
+  del "%TMP_SL_FILE%" 2>nul
+  goto :showlog_err
+)
+
 set /p STREAMLIT_PKG_DIR=<"%TMP_SL_FILE%"
 del "%TMP_SL_FILE%" 2>nul
 
 if not defined STREAMLIT_PKG_DIR (
-  REM Fallback guess
-  set "STREAMLIT_PKG_DIR=%VENV_DIR%\Lib\site-packages\streamlit"
+  echo [ERROR] STREAMLIT_PKG_DIR is empty>>"%LOG%"
+  goto :showlog_err
 )
 
 echo [INFO] STREAMLIT_PKG_DIR=%STREAMLIT_PKG_DIR%>>"%LOG%"
+
 if not exist "%STREAMLIT_PKG_DIR%\__init__.py" (
   echo [ERROR] STREAMLIT_PKG_DIR not valid: "%STREAMLIT_PKG_DIR%">>"%LOG%"
+  echo [ERROR] Expected __init__.py at: "%STREAMLIT_PKG_DIR%\__init__.py">>"%LOG%"
   goto :showlog_err
+)
+
+REM Verify static and templates directories
+if not exist "%STREAMLIT_PKG_DIR%\static" (
+  echo [WARNING] Streamlit static directory not found at: "%STREAMLIT_PKG_DIR%\static">>"%LOG%"
+)
+if not exist "%STREAMLIT_PKG_DIR%\web\server\templates" (
+  echo [WARNING] Streamlit templates directory not found at: "%STREAMLIT_PKG_DIR%\web\server\templates">>"%LOG%"
 )
 
 REM ================== CLEAN ARTIFACTS =================
@@ -83,7 +112,11 @@ del /Q "%SCRIPT_DIR%*.spec"  >>"%LOG%" 2>&1
 echo [TIME] clean end:   %DATE% %TIME%>>"%LOG%"
 
 REM ============= SANITY CHECK: STREAMLIT =============
-"%VENV_PY%" -c "import sys, streamlit; print('PY=',sys.executable); print('STREAMLIT=',streamlit.__file__)" >>"%LOG%" 2>&1 || goto :showlog_err
+echo [INFO] Verifying Streamlit import...>>"%LOG%"
+"%VENV_PY%" -c "import sys, streamlit; print('PY=',sys.executable); print('STREAMLIT=',streamlit.__file__); print('VERSION=',streamlit.__version__)" >>"%LOG%" 2>&1 || (
+  echo [ERROR] Streamlit import failed>>"%LOG%"
+  goto :showlog_err
+)
 
 REM ================== HOOKS GUARD ====================
 if not exist "%HOOK_DIR%\rth_streamlit_version_shim.py" (
@@ -91,6 +124,8 @@ if not exist "%HOOK_DIR%\rth_streamlit_version_shim.py" (
   echo [ERROR] Create pyi_hooks\rth_streamlit_version_shim.py and re-run.>>"%LOG%"
   goto :showlog_err
 )
+
+echo [INFO] All preflight checks passed.>>"%LOG%"
 
 REM ================== START LIVE TAIL =================
 start "TAIL_LOG" powershell -NoProfile -Command "Get-Content -Path '%LOG%' -Wait"
@@ -102,7 +137,6 @@ start "HB_LOG" powershell -NoProfile -Command ^
 REM ===================== BUILD =======================
 echo [TIME] build start: %DATE% %TIME%>>"%LOG%"
 
-REM keep console ON for diagnostics
 set "COMMON_PYI_FLAGS=--noconfirm --clean --log-level=INFO --name %BUILD_NAME% --additional-hooks-dir ""%HOOK_DIR%"""
 
 set "DATA_FLAGS=^
@@ -112,22 +146,27 @@ set "DATA_FLAGS=^
  --add-data "".streamlit;.streamlit"" ^
  --add-data ""DB;DB"" ^
  --add-data ""logo.svg;."" ^
- --add-data "".env;."" ""
+ --add-data "".env;."""
 
 REM CRITICAL: explicitly bundle Streamlit static & templates
 set "STREAMLIT_DATA_FLAGS=^
  --add-data ""%STREAMLIT_PKG_DIR%\static;streamlit\static"" ^
- --add-data ""%STREAMLIT_PKG_DIR%\web\server\templates;streamlit\web\server\templates"" "
+ --add-data ""%STREAMLIT_PKG_DIR%\web\server\templates;streamlit\web\server\templates"""
 
 set "HIDDEN_FLAGS=^
+ --hidden-import=streamlit ^
  --hidden-import=streamlit.web.cli ^
+ --hidden-import=streamlit.runtime ^
+ --hidden-import=streamlit.runtime.scriptrunner ^
+ --hidden-import=streamlit.runtime.state ^
  --hidden-import=openpyxl.utils.dataframe ^
- --hidden-import=dotenv"
+ --hidden-import=dotenv ^
+ --hidden-import=validators"
 
 set "COLLECT_FLAGS=^
  --collect-all streamlit ^
  --collect-data streamlit ^
- --collect-data streamlit.web ^
+ --collect-submodules streamlit ^
  --collect-all pyarrow ^
  --collect-all protobuf ^
  --collect-all tornado ^
@@ -138,6 +177,7 @@ set "COLLECT_FLAGS=^
  --copy-metadata click ^
  --copy-metadata altair ^
  --copy-metadata validators ^
+ --copy-metadata toml ^
  --collect-metadata streamlit ^
  --collect-metadata click ^
  --collect-metadata altair"
@@ -145,9 +185,14 @@ set "COLLECT_FLAGS=^
 set "EXCLUDE_FLAGS=^
  --exclude-module streamlit.external.langchain ^
  --exclude-module tests ^
- --exclude-module pytest"
+ --exclude-module pytest ^
+ --exclude-module unittest"
+
+REM Set runtime environment for metadata hook
+set "RUNTIME_ENV=--runtime-hook ""%HOOK_DIR%\rth_streamlit_version_shim.py"""
 
 if /I "%BUILD_MODE%"=="onedir" (
+  echo [INFO] Building in ONEDIR mode...>>"%LOG%"
   "%VENV_PY%" -m PyInstaller ^
     %COMMON_PYI_FLAGS% ^
     --onedir ^
@@ -156,8 +201,10 @@ if /I "%BUILD_MODE%"=="onedir" (
     %HIDDEN_FLAGS% ^
     %COLLECT_FLAGS% ^
     %EXCLUDE_FLAGS% ^
+    %RUNTIME_ENV% ^
     "%SCRIPT_DIR%run_streamlit_bootstrap.py" >>"%LOG%" 2>&1
 ) else (
+  echo [INFO] Building in ONEFILE mode...>>"%LOG%"
   "%VENV_PY%" -m PyInstaller ^
     %COMMON_PYI_FLAGS% ^
     --onefile ^
@@ -166,6 +213,7 @@ if /I "%BUILD_MODE%"=="onedir" (
     %HIDDEN_FLAGS% ^
     %COLLECT_FLAGS% ^
     %EXCLUDE_FLAGS% ^
+    %RUNTIME_ENV% ^
     "%SCRIPT_DIR%run_streamlit_bootstrap.py" >>"%LOG%" 2>&1
 )
 
@@ -176,18 +224,71 @@ REM ================== STOP TAIL/HEARTBEAT =============
 taskkill /F /FI "WINDOWTITLE eq TAIL_LOG" >nul 2>&1
 taskkill /F /FI "WINDOWTITLE eq HB_LOG"   >nul 2>&1
 
-if NOT "%BUILD_RC%"=="0" goto :showlog_err
+if NOT "%BUILD_RC%"=="0" (
+  echo [ERROR] PyInstaller failed with exit code %BUILD_RC%>>"%LOG%"
+  goto :showlog_err
+)
 
 REM ========== POST-BUILD SAFETY COPY OF STATIC =========
 set "INTERNAL_DIR=%SCRIPT_DIR%dist\%BUILD_NAME%\_internal"
 if exist "%INTERNAL_DIR%" (
   echo [INFO] Post-copy Streamlit static/templates into _internal>>"%LOG%"
+  
+  REM Ensure streamlit directory exists
+  if not exist "%INTERNAL_DIR%\streamlit" mkdir "%INTERNAL_DIR%\streamlit" >>"%LOG%" 2>&1
+  
+  REM Copy static files
   if exist "%STREAMLIT_PKG_DIR%\static" (
-    xcopy /E /I /Y "%STREAMLIT_PKG_DIR%\static" "%INTERNAL_DIR%\streamlit\static" >>"%LOG%" 2>&1
+    echo [INFO] Copying static folder...>>"%LOG%"
+    rmdir /S /Q "%INTERNAL_DIR%\streamlit\static" 2>nul
+    xcopy /E /I /Y /Q "%STREAMLIT_PKG_DIR%\static" "%INTERNAL_DIR%\streamlit\static" >>"%LOG%" 2>&1
+    if errorlevel 1 (
+      echo [WARNING] Static copy had errors>>"%LOG%"
+    ) else (
+      echo [INFO] Static copied successfully>>"%LOG%"
+    )
+  ) else (
+    echo [ERROR] Source static folder not found: "%STREAMLIT_PKG_DIR%\static">>"%LOG%"
   )
+  
+  REM Copy templates
   if exist "%STREAMLIT_PKG_DIR%\web\server\templates" (
-    xcopy /E /I /Y "%STREAMLIT_PKG_DIR%\web\server\templates" "%INTERNAL_DIR%\streamlit\web\server\templates" >>"%LOG%" 2>&1
+    echo [INFO] Copying templates folder...>>"%LOG%"
+    rmdir /S /Q "%INTERNAL_DIR%\streamlit\web\server\templates" 2>nul
+    if not exist "%INTERNAL_DIR%\streamlit\web" mkdir "%INTERNAL_DIR%\streamlit\web" >>"%LOG%" 2>&1
+    if not exist "%INTERNAL_DIR%\streamlit\web\server" mkdir "%INTERNAL_DIR%\streamlit\web\server" >>"%LOG%" 2>&1
+    xcopy /E /I /Y /Q "%STREAMLIT_PKG_DIR%\web\server\templates" "%INTERNAL_DIR%\streamlit\web\server\templates" >>"%LOG%" 2>&1
+    if errorlevel 1 (
+      echo [WARNING] Templates copy had errors>>"%LOG%"
+    ) else (
+      echo [INFO] Templates copied successfully>>"%LOG%"
+    )
+  ) else (
+    echo [ERROR] Source templates folder not found: "%STREAMLIT_PKG_DIR%\web\server\templates">>"%LOG%"
   )
+  
+  REM Verify critical files exist
+  echo [INFO] Verifying critical Streamlit files...>>"%LOG%"
+  if exist "%INTERNAL_DIR%\streamlit\static\index.html" (
+    echo [OK] index.html found>>"%LOG%"
+  ) else (
+    echo [ERROR] index.html NOT found at: "%INTERNAL_DIR%\streamlit\static\index.html">>"%LOG%"
+  )
+  
+  REM List what we have
+  if exist "%INTERNAL_DIR%\streamlit\static" (
+    echo [INFO] Contents of streamlit\static:>>"%LOG%"
+    dir /B "%INTERNAL_DIR%\streamlit\static" >>"%LOG%" 2>&1
+  )
+  
+  REM Create a batch file that sets the environment variable before running
+  echo [INFO] Creating launcher with environment variables...>>"%LOG%"
+  (
+    echo @echo off
+    echo set "STREAMLIT_BUNDLED_VERSION=%STREAMLIT_BUNDLED_VERSION%"
+    echo set "STREAMLIT_SERVER_HEADLESS=true"
+    echo "%~dp0%BUILD_NAME%.exe" %%*
+  ) > "%SCRIPT_DIR%dist\%BUILD_NAME%\run_%BUILD_NAME%.bat"
 )
 
 REM ================ MOVE/COPY ARTIFACTS ===============
@@ -196,6 +297,15 @@ if /I "%BUILD_MODE%"=="onedir" (
   if exist "%SCRIPT_DIR%dist\%BUILD_NAME%" (
     rmdir /S /Q "%SCRIPT_DIR%release\%BUILD_NAME%" 2>nul
     xcopy /E /I /Y "%SCRIPT_DIR%dist\%BUILD_NAME%" "%SCRIPT_DIR%release\%BUILD_NAME%" >>"%LOG%" 2>&1
+    
+    REM Verify critical files exist
+    if not exist "%SCRIPT_DIR%release\%BUILD_NAME%\%BUILD_NAME%.exe" (
+      echo [ERROR] EXE not found in release folder>>"%LOG%"
+      goto :showlog_err
+    )
+    
+    echo [INFO] Release folder structure:>>"%LOG%"
+    dir /S /B "%SCRIPT_DIR%release\%BUILD_NAME%" | findstr /I "streamlit static templates" >>"%LOG%" 2>&1
   ) else (
     echo [ERROR] dist\%BUILD_NAME% not found>>"%LOG%"
     goto :showlog_err
@@ -213,8 +323,8 @@ REM ================ POST-BUILD DIAGNOSTICS ============
 for %%F in ("%SCRIPT_DIR%build\%BUILD_NAME%\warn-%BUILD_NAME%.txt") do (
   if exist "%%~fF" (
     echo.>>"%LOG%"
-    echo [INFO] warn-%BUILD_NAME%.txt tail:>>"%LOG%"
-    powershell -NoProfile -Command "Get-Content -Path '%%~fF' -Tail 200" >>"%LOG%" 2>&1
+    echo [INFO] warn-%BUILD_NAME%.txt tail (first 100 lines):>>"%LOG%"
+    powershell -NoProfile -Command "Get-Content -Path '%%~fF' -Head 100" >>"%LOG%" 2>&1
   )
 )
 
@@ -228,23 +338,35 @@ powershell -NoProfile -Command ^
 
 echo === BUILD END: %DATE% %TIME% ===>>"%LOG%"
 echo.
+echo [SUCCESS] Build completed successfully!
+echo.
 if /I "%BUILD_MODE%"=="onedir" (
-  echo [SUCCESS] Built release\%BUILD_NAME%\ (ONEDIR)
+  echo Built: release\%BUILD_NAME%\ (ONEDIR mode)
+  echo.
+  echo IMPORTANT: To run the application, use one of these methods:
+  echo   1. Double-click: release\%BUILD_NAME%\run_%BUILD_NAME%.bat  (RECOMMENDED)
+  echo   2. Or manually set STREAMLIT_BUNDLED_VERSION=%STREAMLIT_BUNDLED_VERSION% before running the .exe
 ) else (
-  echo [SUCCESS] Built release\%BUILD_NAME%.exe
+  echo Built: release\%BUILD_NAME%.exe (ONEFILE mode)
+  echo IMPORTANT: Set STREAMLIT_BUNDLED_VERSION=%STREAMLIT_BUNDLED_VERSION% before running
 )
 echo.
 echo ---- Tail of build_full.log ----
-powershell -NoProfile -Command "Get-Content -Path '%LOG%' -Tail 200"
+powershell -NoProfile -Command "Get-Content -Path '%LOG%' -Tail 100"
 echo --------------------------------
-pause
+echo.
+echo Press any key to exit...
+pause >nul
 exit /b 0
 
 :showlog_err
 echo.
 echo *** BUILD FAILED ***
+echo.
 echo ---- Tail of build_full.log ----
-powershell -NoProfile -Command "Get-Content -Path '%LOG%' -Tail 200"
+powershell -NoProfile -Command "Get-Content -Path '%LOG%' -Tail 150"
 echo --------------------------------
-pause
+echo.
+echo Press any key to exit...
+pause >nul
 exit /b 1
