@@ -11,7 +11,7 @@ set "VENV_PY=%VENV_DIR%\Scripts\python.exe"
 set "LOG=%SCRIPT_DIR%build_full.log"
 set "BUILD_NAME=logistics_app"
 REM onedir for debug, onefile for single-EXE packaging
-set "BUILD_MODE=onefile"
+set "BUILD_MODE=onedir"
 set "HEARTBEAT_SECS=15"
 set "HOOK_DIR=%SCRIPT_DIR%pyi_hooks"
 set "PYTHONUTF8=1"
@@ -145,32 +145,28 @@ echo [TIME] build start: %DATE% %TIME%>>"%LOG%"
 REM Assemble PyInstaller flags
 set "COMMON_PYI_FLAGS=--noconfirm --clean --log-level=INFO --name %BUILD_NAME% --additional-hooks-dir "%HOOK_DIR%""
 
-REM Build DATA_FLAGS with existence checks so missing files don't break the build.
-REM IMPORTANT: use the '=' syntax for --add-data to avoid quoting issues.
-set "DATA_FLAGS=--add-data=Overview.py;."
-
-if exist "%SCRIPT_DIR%pages"      set "DATA_FLAGS=%DATA_FLAGS% --add-data=pages;pages"
-if exist "%SCRIPT_DIR%utils"      set "DATA_FLAGS=%DATA_FLAGS% --add-data=utils;utils"
-if exist "%SCRIPT_DIR%.streamlit" set "DATA_FLAGS=%DATA_FLAGS% --add-data=.streamlit;.streamlit"
-if exist "%SCRIPT_DIR%DB"         set "DATA_FLAGS=%DATA_FLAGS% --add-data=DB;DB"
-if exist "%SCRIPT_DIR%logo.svg"   set "DATA_FLAGS=%DATA_FLAGS% --add-data=logo.svg;."
-
-set "ENV_FLAG="
+REM Build DATA_FLAGS with existence checks so missing files don't break the build
+set "DATA_FLAGS=--add-data "Overview.py;."""
+if exist "%SCRIPT_DIR%pages"       set "DATA_FLAGS=!DATA_FLAGS! --add-data "pages;pages""
+if exist "%SCRIPT_DIR%utils"       set "DATA_FLAGS=!DATA_FLAGS! --add-data "utils;utils""
+if exist "%SCRIPT_DIR%.streamlit"  set "DATA_FLAGS=!DATA_FLAGS! --add-data ".streamlit;.streamlit""
+if exist "%SCRIPT_DIR%DB"          set "DATA_FLAGS=!DATA_FLAGS! --add-data "DB;DB""
+if exist "%SCRIPT_DIR%logo.svg"    set "DATA_FLAGS=!DATA_FLAGS! --add-data "logo.svg;."""
 if exist "%SCRIPT_DIR%.env" (
-  set "ENV_FLAG=--add-data=.env;."
+  set "DATA_FLAGS=!DATA_FLAGS! --add-data ".env;."""
 ) else (
   echo [INFO] Skipping .env (not found)>>"%LOG%"
 )
 
-REM Bundle Streamlit data conditionally. Quote the RHS because the source path may contain spaces.
+REM Bundle Streamlit data conditionally
 set "STREAMLIT_DATA_FLAGS="
 if exist "%STREAMLIT_PKG_DIR%\static" (
-  set "STREAMLIT_DATA_FLAGS=%STREAMLIT_DATA_FLAGS% --add-data=""%STREAMLIT_PKG_DIR%\static;streamlit\static"""
+  set "STREAMLIT_DATA_FLAGS=!STREAMLIT_DATA_FLAGS! --add-data "%STREAMLIT_PKG_DIR%\static;streamlit\static""
 ) else (
   echo [WARNING] Skipping Streamlit static (not found)>>"%LOG%"
 )
 if exist "%STREAMLIT_PKG_DIR%\web\server\templates" (
-  set "STREAMLIT_DATA_FLAGS=%STREAMLIT_DATA_FLAGS% --add-data=""%STREAMLIT_PKG_DIR%\web\server\templates;streamlit\web\server\templates"""
+  set "STREAMLIT_DATA_FLAGS=!STREAMLIT_DATA_FLAGS! --add-data "%STREAMLIT_PKG_DIR%\web\server\templates;streamlit\web\server\templates""
 ) else (
   echo [INFO] Skipping Streamlit templates (not found)>>"%LOG%"
 )
@@ -182,10 +178,10 @@ set "RUNTIME_ENV=--runtime-hook "%HOOK_DIR%\rth_streamlit_version_shim.py""
 
 if /I "%BUILD_MODE%"=="onedir" (
   echo [INFO] Building in ONEDIR mode...>>"%LOG%"
-  "%VENV_PY%" -m PyInstaller %COMMON_PYI_FLAGS% --onedir %DATA_FLAGS% %ENV_FLAG% %STREAMLIT_DATA_FLAGS% %HIDDEN_FLAGS% %COLLECT_FLAGS% %EXCLUDE_FLAGS% %RUNTIME_ENV% "%SCRIPT_DIR%run_streamlit_bootstrap.py" >>"%LOG%" 2>&1
+  "%VENV_PY%" -m PyInstaller %COMMON_PYI_FLAGS% --onedir %DATA_FLAGS% %STREAMLIT_DATA_FLAGS% %HIDDEN_FLAGS% %COLLECT_FLAGS% %EXCLUDE_FLAGS% %RUNTIME_ENV% "%SCRIPT_DIR%run_streamlit_bootstrap.py" >>"%LOG%" 2>&1
 ) else (
   echo [INFO] Building in ONEFILE mode...>>"%LOG%"
-  "%VENV_PY%" -m PyInstaller %COMMON_PYI_FLAGS% --onefile %DATA_FLAGS% %ENV_FLAG% %STREAMLIT_DATA_FLAGS% %HIDDEN_FLAGS% %COLLECT_FLAGS% %EXCLUDE_FLAGS% %RUNTIME_ENV% "%SCRIPT_DIR%run_streamlit_bootstrap.py" >>"%LOG%" 2>&1
+  "%VENV_PY%" -m PyInstaller %COMMON_PYI_FLAGS% --onefile %DATA_FLAGS% %STREAMLIT_DATA_FLAGS% %HIDDEN_FLAGS% %COLLECT_FLAGS% %EXCLUDE_FLAGS% %RUNTIME_ENV% "%SCRIPT_DIR%run_streamlit_bootstrap.py" >>"%LOG%" 2>&1
 )
 
 set "BUILD_RC=%ERRORLEVEL%"

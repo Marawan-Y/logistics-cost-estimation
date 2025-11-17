@@ -58,6 +58,8 @@ echo.
 
 echo [STEP 3] Copying template files...
 if exist "%STREAMLIT_DIR%\web\server\templates" (
+  if not exist "%INTERNAL_DIR%\streamlit\web" mkdir "%INTERNAL_DIR%\streamlit\web"
+  if not exist "%INTERNAL_DIR%\streamlit\web\server" mkdir "%INTERNAL_DIR%\streamlit\web\server"
   rmdir /S /Q "%INTERNAL_DIR%\streamlit\web\server\templates" 2>nul
   xcopy /E /I /Y /Q "%STREAMLIT_DIR%\web\server\templates" "%INTERNAL_DIR%\streamlit\web\server\templates"
   if errorlevel 1 (
@@ -67,9 +69,8 @@ if exist "%STREAMLIT_DIR%\web\server\templates" (
   )
   echo [OK] Template files copied
 ) else (
-  echo [ERROR] Source templates directory not found: %STREAMLIT_DIR%\web\server\templates
-  pause
-  exit /b 1
+  echo [WARNING] Source templates directory not found: %STREAMLIT_DIR%\web\server\templates
+  echo [INFO] This may be normal for newer Streamlit versions
 )
 echo.
 
